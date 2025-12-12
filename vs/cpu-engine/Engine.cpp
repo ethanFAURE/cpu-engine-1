@@ -290,6 +290,63 @@ void Engine::ReleaseEntity(ENTITY* pEntity)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void Engine::GetCursor(DirectX::XMFLOAT2& pos)
+{
+	POINT pt;
+	GetCursorPos(&pt);
+	ScreenToClient(m_hWnd, &pt);
+	pos.x = (float)pt.x;
+	pos.y = (float)pt.y;
+	pos.x = pos.x*m_renderWidth/m_windowWidth;
+	pos.y = pos.y*m_renderHeight/m_windowHeight;
+}
+
+//RAY Engine::ToRay(DirectX::XMFLOAT2& pt)
+//{
+//	const float xNdc = (2.0f * pt.x) / m_renderWidth - 1.0f;
+//	const float yNdc = 1.0f - (2.0f * pt.y) / m_renderHeight;
+//
+//	const DirectX::XMVECTOR nearClip = DirectX::XMVectorSet(xNdc, yNdc, 0.0f, 1.0f);
+//	const DirectX::XMVECTOR farClip  = DirectX::XMVectorSet(xNdc, yNdc, 1.0f, 1.0f);
+//
+//	const DirectX::XMMATRIX invViewProj = DirectX::XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_matViewProj));
+//
+//	DirectX::XMVECTOR nearWorld = DirectX::XMVector4Transform(nearClip, invViewProj);
+//	DirectX::XMVECTOR farWorld = DirectX::XMVector4Transform(farClip, invViewProj);
+//	nearWorld = DirectX::XMVectorScale(nearWorld, 1.0f / DirectX::XMVectorGetW(nearWorld));
+//	farWorld = DirectX::XMVectorScale(farWorld, 1.0f / DirectX::XMVectorGetW(farWorld));
+//
+//	RAY ray;
+//	ray.pos = m_camera.pos;
+//	const DirectX::XMVECTOR dir = DirectX::XMVectorSubtract(farWorld, XMLoadFloat3(&m_camera.pos));
+//	XMStoreFloat3(&ray.dir, DirectX::XMVector3Normalize(dir));
+//	return ray;
+//}
+
+RAY Engine::ToRay(DirectX::XMFLOAT2& pt)
+{
+	float px = pt.x*2.0f/m_renderWidth - 1.0f;
+	float py = pt.y*2.0f/m_renderHeight - 1.0f;
+
+	float x = px/m_matProj._11;
+	float y = -py/m_matProj._22;
+	float z = 1.0f;
+
+	RAY ray;
+	ray.pos.x = m_camera.world._41;
+	ray.pos.y = m_camera.world._42;
+	ray.pos.z = m_camera.world._43;
+	ray.dir.x = x*m_camera.world._11 + y*m_camera.world._21 + z*m_camera.world._31;
+	ray.dir.y = x*m_camera.world._12 + y*m_camera.world._22 + z*m_camera.world._32;
+	ray.dir.z = x*m_camera.world._13 + y*m_camera.world._23 + z*m_camera.world._33;
+	XMStoreFloat3(&ray.dir, DirectX::XMVector3Normalize(XMLoadFloat3(&ray.dir)));
+	return ray;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 DirectX::XMFLOAT3 Engine::ApplyLighting(DirectX::XMFLOAT3& color, float intensity)
 {
 	intensity = Clamp(intensity);
@@ -452,6 +509,9 @@ bool Engine::Time()
 
 void Engine::Update()
 {
+	// Controller
+	m_keyboard.Update();
+
 	// Physics
 	Update_Physics();
 
@@ -1030,475 +1090,4 @@ LRESULT Engine::OnWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 		break;
 	}
 	return DefWindowProc(hWnd, message, wParam, lParam);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void ThreadJob::OnStart()
-{
-	Engine* pEngine = Engine::Instance();
-	m_quitRequest = false;
-
-	// Thread
-	while ( true )
-	{
-		// Waiting next job
-		WaitForSingleObject(m_hEventStart, INFINITE);
-		if ( m_quitRequest )
-			break;
-
-		// Job
-		while ( true )
-		{
-			int index = pEngine->m_nextTile.fetch_add(1, std::memory_order_relaxed);
-			if ( index>=m_count )
-				break;
-
-			pEngine->Render_Entity(index);
-		}
-
-		// End
-		SetEvent(m_hEventEnd);
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-VERTEX::VERTEX()
-{
-	Identity();
-}
-
-void VERTEX::Identity()
-{
-	pos = { 0.0f, 0.0f, 0.0f };
-	color = { 1.0f, 1.0f, 1.0f };
-	normal = { 0.0f, 1.0f, 0.0f };
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-TRIANGLE::TRIANGLE()
-{
-	Identity();
-}
-
-void TRIANGLE::Identity()
-{
-	v[0].Identity();
-	v[1].Identity();
-	v[2].Identity();
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-RECTANGLE::RECTANGLE()
-{
-	Zero();
-}
-
-void RECTANGLE::Zero()
-{
-	min = { 0.0f, 0.0f };
-	max = { 0.0f, 0.0f };
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-AABB::AABB()
-{
-	Zero();
-}
-
-AABB& AABB::operator=(const OBB& obb)
-{
-	min = {  FLT_MAX,  FLT_MAX,  FLT_MAX };
-	max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-
-	for ( int i=0 ; i<8 ; ++i )
-	{
-		const auto& p = obb.pts[i];
-
-		if ( p.x<min.x )
-			min.x = p.x;
-		if ( p.y<min.y )
-			min.y = p.y;
-		if ( p.z<min.z )
-			min.z = p.z;
-
-		if ( p.x>max.x )
-			max.x = p.x;
-		if ( p.y>max.y )
-			max.y = p.y;
-		if ( p.z>max.z )
-			max.z = p.z;
-	}
-	return *this;
-}
-
-void AABB::Zero()
-{
-	min = { 0.0f, 0.0f, 0.0f };
-	max = { 0.0f, 0.0f, 0.0f };
-}
-
-bool XM_CALLCONV AABB::ToScreen(RECTANGLE& out, DirectX::FXMMATRIX wvp, float renderWidth, float renderHeight)
-{
-	const float renderX = 0.0f;
-	const float renderY = 0.0f;
-	float minX =  FLT_MAX, minY =  FLT_MAX;
-	float maxX = -FLT_MAX, maxY = -FLT_MAX;
-
-	const float xmin = min.x;
-	const float ymin = min.y;
-	const float zmin = min.z;
-	const float xmax = max.x;
-	const float ymax = max.y;
-	const float zmax = max.z;
-
-	const DirectX::XMVECTOR pts[8] =
-	{
-		DirectX::XMVectorSet(xmin, ymin, zmin, 1.0f),
-		DirectX::XMVectorSet(xmax, ymin, zmin, 1.0f),
-		DirectX::XMVectorSet(xmax, ymax, zmin, 1.0f),
-		DirectX::XMVectorSet(xmin, ymax, zmin, 1.0f),
-		DirectX::XMVectorSet(xmin, ymin, zmax, 1.0f),
-		DirectX::XMVectorSet(xmax, ymin, zmax, 1.0f),
-		DirectX::XMVectorSet(xmax, ymax, zmax, 1.0f),
-		DirectX::XMVectorSet(xmin, ymax, zmax, 1.0f)
-	};
-
-	for ( int i=0 ; i<8 ; ++i )
-	{
-		DirectX::XMVECTOR clip = XMVector4Transform(pts[i], wvp);
-
-		float w = DirectX::XMVectorGetW(clip);
-		if ( w<=0.00001f )
-			continue; // derrière caméra
-
-		float invW = 1.0f / w;
-		float ndcX = DirectX::XMVectorGetX(clip) * invW;
-		float ndcY = DirectX::XMVectorGetY(clip) * invW;
-
-		float sx = renderX + (ndcX * 0.5f + 0.5f) * renderWidth;
-		float sy = renderY + (-ndcY * 0.5f + 0.5f) * renderHeight;
-
-		minX = std::min(minX, sx);
-		minY = std::min(minY, sy);
-		maxX = std::max(maxX, sx);
-		maxY = std::max(maxY, sy);
-	}
-
-	// Outside
-	if ( minX>maxX || minY>maxY )
-		return false;
-
-	minX = Engine::Clamp(minX, renderX, renderX+renderWidth);
-	maxX = Engine::Clamp(maxX, renderX, renderX+renderWidth);
-	minY = Engine::Clamp(minY, renderY, renderY+renderHeight);
-	maxY = Engine::Clamp(maxY, renderY, renderY+renderHeight);
-	out.min = { minX, minY };
-	out.max = { maxX, maxY };
-	return true;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-OBB::OBB()
-{
-	Zero();
-}
-
-OBB& OBB::operator=(const AABB& aabb)
-{
-	// Bas (zmin) puis Haut (zmax), en tournant sur x/y
-	const float xmin = aabb.min.x, ymin = aabb.min.y, zmin = aabb.min.z;
-	const float xmax = aabb.max.x, ymax = aabb.max.y, zmax = aabb.max.z;
-	pts[0] = { xmin, ymin, zmin };
-	pts[1] = { xmax, ymin, zmin };
-	pts[2] = { xmax, ymax, zmin };
-	pts[3] = { xmin, ymax, zmin };
-	pts[4] = { xmin, ymin, zmax };
-	pts[5] = { xmax, ymin, zmax };
-	pts[6] = { xmax, ymax, zmax };
-	pts[7] = { xmin, ymax, zmax };
-	return *this;
-}
-
-void OBB::Zero()
-{
-	for ( int i=0 ; i<8 ; i++ )
-		pts[i] = { 0.0f, 0.0f, 0.0f };
-}
-
-void XM_CALLCONV OBB::Transform(DirectX::FXMMATRIX m)
-{
-	for ( int i=0 ; i<8 ; ++i )
-	{
-		DirectX::XMVECTOR p = XMLoadFloat3(&pts[i]);
-		p = XMVector3TransformCoord(p, m);
-		XMStoreFloat3(&pts[i], p);
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-MESH::MESH()
-{
-	Clear();
-}
-
-void MESH::Clear()
-{
-	triangles.clear();
-	aabb.Zero();
-}
-
-void MESH::AddTriangle(DirectX::XMFLOAT3& a, DirectX::XMFLOAT3& b, DirectX::XMFLOAT3& c, DirectX::XMFLOAT3& color)
-{
-	TRIANGLE t;
-	t.v[0].pos = a;
-	t.v[0].color = color;
-	t.v[1].pos = b;
-	t.v[1].color = color;
-	t.v[2].pos = c;
-	t.v[2].color = color;
-	triangles.push_back(t);
-}
-
-void MESH::AddFace(DirectX::XMFLOAT3& a, DirectX::XMFLOAT3& b, DirectX::XMFLOAT3& c, DirectX::XMFLOAT3& d, DirectX::XMFLOAT3& color)
-{
-	AddTriangle(a, c, b, color);
-	AddTriangle(a, d, c, color);
-}
-
-void MESH::Optimize()
-{
-	CalculateNormals();
-	CalculateBox();
-}
-
-void MESH::CalculateNormals()
-{
-	std::map<DirectX::XMFLOAT3, DirectX::XMVECTOR, VEC3_CMP> normalAccumulator;
-	for ( TRIANGLE& t : triangles )
-	{
-		DirectX::XMVECTOR p0 = DirectX::XMLoadFloat3(&t.v[0].pos);
-		DirectX::XMVECTOR p1 = DirectX::XMLoadFloat3(&t.v[1].pos);
-		DirectX::XMVECTOR p2 = DirectX::XMLoadFloat3(&t.v[2].pos);
-
-		DirectX::XMVECTOR edge1 = DirectX::XMVectorSubtract(p1, p0);
-		DirectX::XMVECTOR edge2 = DirectX::XMVectorSubtract(p2, p0);
-		DirectX::XMVECTOR faceNormal = DirectX::XMVector3Cross(edge1, edge2);
-		
-		if ( normalAccumulator.count(t.v[0].pos)==0 )
-			normalAccumulator[t.v[0].pos] = DirectX::XMVectorZero();
-		if ( normalAccumulator.count(t.v[1].pos)==0 )
-			normalAccumulator[t.v[1].pos] = DirectX::XMVectorZero();
-		if ( normalAccumulator.count(t.v[2].pos)==0 )
-			normalAccumulator[t.v[2].pos] = DirectX::XMVectorZero();
-
-		normalAccumulator[t.v[0].pos] = DirectX::XMVectorAdd(normalAccumulator[t.v[0].pos], faceNormal);
-		normalAccumulator[t.v[1].pos] = DirectX::XMVectorAdd(normalAccumulator[t.v[1].pos], faceNormal);
-		normalAccumulator[t.v[2].pos] = DirectX::XMVectorAdd(normalAccumulator[t.v[2].pos], faceNormal);
-	}
-
-	for ( TRIANGLE& t : triangles )
-	{
-		for ( int i=0 ; i<3 ; i++ )
-		{
-			DirectX::XMVECTOR sumNormal = normalAccumulator[t.v[i].pos];
-			sumNormal = DirectX::XMVector3Normalize(sumNormal);
-			DirectX::XMStoreFloat3(&t.v[i].normal, sumNormal);
-		}
-	}
-}
-
-void MESH::CalculateBox()
-{
-	aabb.min.x = FLT_MAX;
-	aabb.min.y = FLT_MAX;
-	aabb.min.z = FLT_MAX;
-	aabb.max.x = -FLT_MAX;
-	aabb.max.y = -FLT_MAX;
-	aabb.max.z = -FLT_MAX;
-
-	for ( TRIANGLE& t : triangles )
-	{
-		for ( int i=0 ; i<3 ; i++ )
-		{
-			if ( t.v[i].pos.x<aabb.min.x )
-				aabb.min.x = t.v[i].pos.x;
-			if ( t.v[i].pos.y<aabb.min.y )
-				aabb.min.y = t.v[i].pos.y;
-			if ( t.v[i].pos.z<aabb.min.z )
-				aabb.min.z = t.v[i].pos.z;
-				
-			if ( t.v[i].pos.x>aabb.max.x )
-				aabb.max.x = t.v[i].pos.x;
-			if ( t.v[i].pos.y>aabb.max.y )
-				aabb.max.y = t.v[i].pos.y;
-			if ( t.v[i].pos.z>aabb.max.z )
-				aabb.max.z = t.v[i].pos.z;
-		}
-	}	
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-TRANSFORM::TRANSFORM()
-{
-	Identity();
-}
-
-void TRANSFORM::Identity()
-{
-	pos = { 0.0f, 0.0f, 0.0f };
-	sca = { 1.0f, 1.0f, 1.0f };
-	ResetRotation();
-}
-
-void TRANSFORM::UpdateWorld()
-{
-	DirectX::XMVECTOR s = XMLoadFloat3(&sca);
-	DirectX::XMVECTOR p = XMLoadFloat3(&pos);
-
-	DirectX::XMVECTOR sx = DirectX::XMVectorSplatX(s);
-	DirectX::XMVECTOR sy = DirectX::XMVectorSplatY(s);
-	DirectX::XMVECTOR sz = DirectX::XMVectorSplatZ(s);
-
-	DirectX::XMMATRIX w = XMLoadFloat4x4(&rot);
-	w.r[0] = DirectX::XMVectorMultiply(w.r[0], sx);
-	w.r[1] = DirectX::XMVectorMultiply(w.r[1], sy);
-	w.r[2] = DirectX::XMVectorMultiply(w.r[2], sz);
-	w.r[3] = DirectX::XMVectorSetW(p, 1.0f);
-
-	XMStoreFloat4x4(&world, w);
-}
-
-void TRANSFORM::SetScaling(float scale)
-{
-	sca.x = scale;
-	sca.y = scale;
-	sca.z = scale;
-}
-
-void TRANSFORM::SetPosition(float x, float y, float z)
-{
-	pos.x = x;
-	pos.y = y;
-	pos.z = z;
-}
-
-void TRANSFORM::Move(float dist)
-{
-	pos.x += dir.x * dist;
-	pos.y += dir.y * dist;
-	pos.z += dir.z * dist;
-}
-
-void TRANSFORM::ResetRotation()
-{
-	dir = { 0.0f, 0.0f, 1.0f };
-	right = { 1.0f, 0.0f, 0.0f };
-	up = { 0.0f, 1.0f, 0.0f };
-	quat = { 0.0f, 0.0f, 0.0f, 1.0f };
-	XMStoreFloat4x4(&rot, DirectX::XMMatrixIdentity());
-}
-
-void TRANSFORM::SetRotation(TRANSFORM& transform)
-{
-	dir = transform.dir;
-	right = transform.right;
-	up = transform.up;
-	quat = transform.quat;
-	rot = transform.rot;
-}
-
-void TRANSFORM::SetYPR(float yaw, float pitch, float roll)
-{
-	ResetRotation();
-	AddYPR(yaw, pitch, roll);
-}
-
-void TRANSFORM::AddYPR(float yaw, float pitch, float roll)
-{
-	DirectX::XMVECTOR axisDir = XMLoadFloat3(&dir);
-	DirectX::XMVECTOR axisRight = XMLoadFloat3(&right);
-	DirectX::XMVECTOR axisUp = XMLoadFloat3(&up);
-
-	DirectX::XMVECTOR qRot = XMLoadFloat4(&quat);
-	if ( roll )
-		qRot = DirectX::XMQuaternionMultiply(qRot, DirectX::XMQuaternionRotationAxis(axisDir, roll));
-	if ( pitch )
-		qRot = DirectX::XMQuaternionMultiply(qRot, DirectX::XMQuaternionRotationAxis(axisRight, pitch));
-	if ( yaw )
-		qRot = DirectX::XMQuaternionMultiply(qRot, DirectX::XMQuaternionRotationAxis(axisUp, yaw));
-
-	XMStoreFloat4(&quat, qRot);
-
-	DirectX::XMMATRIX mRot = DirectX::XMMatrixRotationQuaternion(qRot);
-	XMStoreFloat4x4(&rot, mRot);
-
-	right.x = rot._11;
-	right.y = rot._12;
-	right.z = rot._13;
-	up.x = rot._21;
-	up.y = rot._22;
-	up.z = rot._23;
-	dir.x = rot._31;
-	dir.y = rot._32;
-	dir.z = rot._33;
-}
-
-void TRANSFORM::LookAt(float x, float y, float z)
-{
-	DirectX::XMVECTOR eyePos = XMLoadFloat3(&pos);
-	DirectX::XMVECTOR focusPos = DirectX::XMVectorSet(x, y, z, 0.0f);
-	DirectX::XMVECTOR upDir = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-
-	DirectX::XMMATRIX cam = DirectX::XMMatrixInverse(nullptr, DirectX::XMMatrixLookAtLH(eyePos, focusPos, upDir));
-	XMStoreFloat4x4(&rot, cam);
-	XMStoreFloat4(&quat, DirectX::XMQuaternionRotationMatrix(cam));
-
-	right.x = rot._11;
-	right.y = rot._12;
-	right.z = rot._13;
-	up.x = rot._21;
-	up.y = rot._22;
-	up.z = rot._23;
-	dir.x = rot._31;
-	dir.y = rot._32;
-	dir.z = rot._33;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-ENTITY::ENTITY()
-{
-	index = -1;
-	sortedIndex = -1;
-	dead = false;
-	pMesh = nullptr;
-	material = Engine::ToColor(255, 255, 255);
-	lifetime = 0.0f;
-	tile = 0;
 }

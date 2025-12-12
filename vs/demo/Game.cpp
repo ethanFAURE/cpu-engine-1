@@ -56,7 +56,6 @@ void Game::OnUpdate()
 
 	// Camera
 	m_camera.AddYPR(0.0f, 0.0f, m_dt*0.1f);
-	//m_camera.AddYPR(0.0f, m_dt);
 
 	// Missiles
 	for ( auto it=m_missiles.begin() ; it!=m_missiles.end() ; )
@@ -73,7 +72,7 @@ void Game::OnUpdate()
 	}
 
 	// Fire
-	if ( GetAsyncKeyState(VK_SPACE)<0 )
+	if ( m_keyboard.IsKey(VK_SPACE) )
 	{
 		ENTITY* pMissile = CreateEntity();
 		pMissile->pMesh = &m_meshCube;
@@ -81,6 +80,18 @@ void Game::OnUpdate()
 		pMissile->transform.pos = m_pShip->transform.pos;
 		pMissile->transform.SetRotation(m_pShip->transform);
 		pMissile->transform.Move(1.5f);
+		m_missiles.push_back(pMissile);
+	}
+	if ( m_keyboard.IsKeyDown(VK_LBUTTON) )
+	{
+		DirectX::XMFLOAT2 pt;
+		GetCursor(pt);
+		RAY ray = ToRay(pt);
+		ENTITY* pMissile = CreateEntity();
+		pMissile->pMesh = &m_meshCube;
+		pMissile->transform.SetScaling(0.2f);
+		pMissile->transform.pos = ray.pos;
+		pMissile->transform.LookTo(ray.dir);
 		m_missiles.push_back(pMissile);
 	}
 }

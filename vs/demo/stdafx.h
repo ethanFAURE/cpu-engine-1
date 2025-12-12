@@ -6,5 +6,6 @@
 	#pragma comment(lib, "../x64/release/cpu-engine.lib")
 #endif
 
+#include <SDKDDKVer.h>
 #include "../cpu-engine/cpu.h"
 #include "Game.h"

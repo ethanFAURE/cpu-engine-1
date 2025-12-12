@@ -1,6 +1,6 @@
 #pragma once
 
-// Librairies
+// Libraries
 ///////////////
 
 #pragma comment(lib, "winmm.lib")
@@ -8,7 +8,6 @@
 // Windows
 ///////////
 
-#include "targetver.h"
 #include <windows.h>
 #undef min
 #undef max
@@ -38,15 +37,27 @@
 // Engine
 ///////////
 
-using ui32 = unsigned __int32;
+using ui32								= unsigned __int32;
 
+inline DirectX::XMVECTOR XMRIGHT		= DirectX::g_XMIdentityR0;
+inline DirectX::XMVECTOR XMUP			= DirectX::g_XMIdentityR1;
+inline DirectX::XMVECTOR XMDIR			= DirectX::g_XMIdentityR2;
+
+#define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
+#define RELPTR(p)						{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
+
+// Forward declaration
 struct AABB;
 struct OBB;
 class Engine;
 class Game;
 
-#define DELPTR(p)				{ if ( (p) ) { delete (p); (p) = nullptr; } }
-#define RELPTR(p)				{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
-
+// Core
+#include "Keyboard.h"
 #include "Thread.h"
+
+// Engine
+#include "Geometry.h"
+#include "Entity.h"
+#include "Multithreading.h"
 #include "Engine.h"

@@ -81,7 +81,6 @@
     <ClInclude Include="Game.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Resource.h" />
-    <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="demo.cpp" />
@@ -97,6 +96,11 @@
   <ItemGroup>
     <Image Include="demo.ico" />
     <Image Include="small.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\cpu-engine\cpu-engine.vcxproj">
+      <Project>{99eb8ba1-1d88-4d23-80e7-cca2f07ea15f}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

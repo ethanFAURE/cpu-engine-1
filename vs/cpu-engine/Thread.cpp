@@ -3,13 +3,14 @@
 Thread::Thread()
 {
 	m_callback = nullptr;
-
-	Reset();
+	m_hThread = nullptr;
+	m_idThread = 0;
+	m_idThreadParent = 0;
 }
 
 Thread::~Thread()
 {
-	assert( m_idThread==0 );
+	assert( IsRunning()==false );
 
 	if ( m_idThread && m_hThread )
 		TerminateThread(m_hThread, 0);
@@ -24,16 +25,14 @@ Thread::~Thread()
 
 bool Thread::Run()
 {
-	Stop();
-
-	DWORD idThreadParent = GetCurrentThreadId();
+	assert( IsRunning()==false );
 
 	DWORD idThread;
 	HANDLE hThread = CreateThread(nullptr, 0, ThreadProc, (void*)this, CREATE_SUSPENDED, &idThread);
 	if ( hThread==nullptr )
 		return false;
 
-	m_idThreadParent = idThreadParent;
+	m_idThreadParent = GetCurrentThreadId();
 	m_hThread = hThread;
 	m_idThread = idThread;
 	ResumeThread(m_hThread);
@@ -52,35 +51,10 @@ void Thread::Wait()
 	{
 		WaitForSingleObject(m_hThread, INFINITE);
 		CloseHandle(m_hThread);
-		Reset();
+		m_hThread = nullptr;
+		m_idThread = 0;
+		m_idThreadParent = 0;
 	}
-}
-
-void Thread::Stop()
-{
-	m_stopping = true;
-	Wait();
-	Reset();
-}
-
-void Thread::PostQuit()
-{
-	if ( m_hThread )
-	{
-		PostThreadMessage(m_idThread, WM_QUIT, 0, 0);
-	}
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void Thread::Reset()
-{
-	m_hThread = nullptr;
-	m_idThread = 0;
-	m_idThreadParent = 0;
-	m_stopping = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -90,13 +64,11 @@ void Thread::Reset()
 DWORD WINAPI Thread::ThreadProc(void* pParam)
 {
 	Thread* pThread = (Thread*)pParam;
-	
-	pThread->OnPrepare();
 
-	if ( pThread->HasCallback() )
+	if ( pThread->m_callback!=nullptr )
+		pThread->m_callback();
+	else
 		pThread->OnCallback();
-
-	pThread->OnStart();
 
 	pThread->m_idThread = 0;
 	return 0;
