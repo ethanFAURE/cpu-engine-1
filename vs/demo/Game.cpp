@@ -42,7 +42,7 @@ void Game::OnUpdate()
 	m_pShip->transform.pos.z += m_dt * 1.0f;
 
 	// Camera
-	//m_camera.transform.AddYPR(0.0f, 0.0f, m_dt*0.1f);
+	m_camera.transform.AddYPR(0.0f, 0.0f, m_dt*0.1f);
 
 	// Missiles
 	for ( auto it=m_missiles.begin() ; it!=m_missiles.end() ; )
