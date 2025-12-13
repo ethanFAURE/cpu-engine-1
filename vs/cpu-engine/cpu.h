@@ -73,6 +73,7 @@ using PS_FUNC							= bool(*)(XMFLOAT3& out, const PIXELSHADER& in, const void* 
 #include "Thread.h"
 
 // Engine
+#include "UI.h"
 #include "Geometry.h"
 #include "Entity.h"
 #include "Multithreading.h"

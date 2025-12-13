@@ -38,6 +38,9 @@
     <ClInclude Include="Keyboard.h">
       <Filter>Core</Filter>
     </ClInclude>
+    <ClInclude Include="UI.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Thread.cpp">
@@ -60,6 +63,9 @@
     </ClCompile>
     <ClCompile Include="Keyboard.cpp">
       <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="UI.cpp">
+      <Filter>Engine</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

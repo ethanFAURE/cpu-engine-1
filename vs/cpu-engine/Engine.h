@@ -19,6 +19,8 @@ public:
 
 	ENTITY* CreateEntity();
 	void ReleaseEntity(ENTITY* pEntity);
+	SPRITE* CreateSprite();
+	void ReleaseSprite(SPRITE* pSprite);
 
 	void GetCursor(XMFLOAT2& pt);
 	RAY GetCameraRay(XMFLOAT2& pt);
@@ -44,14 +46,17 @@ protected:
 	void Render_Box();
 	void Render_Tile();
 	void Render_Entity(int iTile);
+	void Render_UI();
 
-	void Clear(XMFLOAT3& color);
-	void DrawSky();
-	void Draw(ENTITY* pEntity, TILE& tile);
 	void Present();
+	void Clear(XMFLOAT3& color);
+	void DrawSprite(SPRITE* pSprite);
+	void DrawSky();
+	void DrawEntity(ENTITY* pEntity, TILE& tile);
 	void FillTriangle(XMFLOAT3* tri, VERTEXSHADER* vo, MATERIAL& material, TILE& tile);
 	static bool PixelShader(XMFLOAT3& out, const PIXELSHADER& in, const void* data);
 	void DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOAT3& color);
+	bool Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8_t* src, int srcW, int srcH, int srcX, int srcY, int w, int h);
 
 	virtual void OnStart() {}
 	virtual void OnUpdate() {}
@@ -138,6 +143,15 @@ protected:
 	int m_bornEntityCount;
 	std::vector<ENTITY*> m_deadEntities;
 	int m_deadEntityCount;
+
+	// Sprite
+	std::vector<SPRITE*> m_sprites;
+	std::vector<SPRITE*> m_sortedSprites;
+	int m_spriteCount;
+	std::vector<SPRITE*> m_bornSprites;
+	int m_bornSpriteCount;
+	std::vector<SPRITE*> m_deadSprites;
+	int m_deadSpriteCount;
 
 	// Stats
 	int m_clipEntityCount;

@@ -3,6 +3,7 @@
 Game::Game()
 {
 	m_pShip = nullptr;
+	m_pSprite = nullptr;
 }
 
 Game::~Game()
@@ -16,6 +17,12 @@ Game::~Game()
 void Game::OnStart()
 {
 	// YOUR CODE HERE
+
+	m_texture.Load("test.bmp");
+	m_pSprite = CreateSprite();
+	m_pSprite->pTexture = &m_texture;
+	m_pSprite->x = 10;
+	m_pSprite->y = 10;
 
 	CreateSpaceship(m_meshShip);
 	CreateCube(m_meshCube);

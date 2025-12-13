@@ -16,6 +16,8 @@ protected:
 	MESH m_meshShip;
 	MESH m_meshCube;
 	MATERIAL m_materialShip;
+	TEXTURE m_texture;
+	SPRITE* m_pSprite;
 	ENTITY* m_pShip;
 	std::list<ENTITY*> m_missiles;
 

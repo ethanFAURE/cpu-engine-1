@@ -296,6 +296,30 @@ void Engine::ReleaseEntity(ENTITY* pEntity)
 	m_deadEntityCount++;
 }
 
+SPRITE* Engine::CreateSprite()
+{
+	SPRITE* pSprite = new SPRITE;
+	if ( m_bornSpriteCount<m_bornSprites.size() )
+		m_bornSprites[m_bornSpriteCount] = pSprite;
+	else
+		m_bornSprites.push_back(pSprite);
+	m_bornSpriteCount++;
+	return pSprite;
+}
+
+void Engine::ReleaseSprite(SPRITE* pSprite)
+{
+	if ( pSprite==nullptr || pSprite->dead )
+		return;
+
+	pSprite->dead = true;
+	if ( m_deadSpriteCount<m_deadSprites.size() )
+		m_deadSprites[m_deadSpriteCount] = pSprite;
+	else
+		m_deadSprites.push_back(pSprite);
+	m_deadSpriteCount++;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -575,6 +599,63 @@ void Engine::Update_Purge()
 		m_entityCount++;
 	}
 	m_bornEntityCount = 0;
+
+	// Dead
+	for ( int i=0 ; i<m_deadSpriteCount ; i++ )
+	{
+		SPRITE* pSprite = m_deadSprites[i];
+		if ( pSprite->index==-1 )
+		{
+			delete pSprite;
+			m_deadSprites[i] = nullptr;
+			continue;
+		}
+
+		if ( pSprite->index<m_spriteCount-1 )
+		{
+			m_sprites[pSprite->index] = m_sprites[m_spriteCount-1];
+			m_sprites[pSprite->index]->index = pSprite->index;
+		}
+
+		if ( pSprite->sortedIndex<m_spriteCount-1 )
+		{
+			m_sortedSprites[pSprite->sortedIndex] = m_sortedSprites[m_spriteCount-1];
+			m_sortedSprites[pSprite->sortedIndex]->sortedIndex = pSprite->sortedIndex;
+		}
+
+		delete pSprite;
+		m_deadSprites[i] = nullptr;
+		m_spriteCount--;
+	}
+	m_deadSpriteCount = 0;
+
+	// Born
+	for ( int i=0 ; i<m_bornSpriteCount ; i++ )
+	{
+		SPRITE* pSprite = m_bornSprites[i];
+		if ( pSprite->dead )
+		{
+			delete pSprite;
+			m_bornSprites[i] = nullptr;
+			continue;
+		}
+
+		pSprite->index = m_spriteCount;
+		pSprite->sortedIndex = pSprite->index;
+
+		if ( pSprite->index<m_sprites.size() )
+			m_sprites[pSprite->index] = pSprite;
+		else
+			m_sprites.push_back(pSprite);
+
+		if ( pSprite->sortedIndex<m_sortedSprites.size() )
+			m_sortedSprites[pSprite->sortedIndex] = pSprite;
+		else
+			m_sortedSprites.push_back(pSprite);
+
+		m_spriteCount++;
+	}
+	m_bornSpriteCount = 0;
 }
 
 void Engine::Render()
@@ -606,6 +687,9 @@ void Engine::Render()
 	// Callback
 	OnPostRender();
 
+	// UI
+	Render_UI();
+
 	// Present
 	Present();
 }
@@ -615,6 +699,10 @@ void Engine::Render_Sort()
 	std::sort(m_sortedEntities.begin(), m_sortedEntities.begin()+m_entityCount, [](const ENTITY* pA, const ENTITY* pB) { return pA->view.z < pB->view.z; });
 	for ( int i=0 ; i<m_entityCount ; i++ )
 		m_sortedEntities[i]->sortedIndex = i;
+
+	std::sort(m_sortedSprites.begin(), m_sortedSprites.begin()+m_spriteCount, [](const SPRITE* pA, const SPRITE* pB) { return pA->z < pB->z; });
+	for ( int i=0 ; i<m_spriteCount ; i++ )
+		m_sortedSprites[i]->sortedIndex = i;
 }
 
 void Engine::Render_Box()
@@ -698,7 +786,19 @@ void Engine::Render_Entity(int iTile)
 		if ( entityHasTile==false )
 			continue;
 
-		Draw(pEntity, tile);
+		DrawEntity(pEntity, tile);
+	}
+}
+
+void Engine::Render_UI()
+{
+	for ( int iSprite=0 ; iSprite<m_spriteCount ; iSprite++ )
+	{
+		SPRITE* pSprite = m_sortedSprites[iSprite];
+		if ( pSprite->dead )
+			continue;
+
+		DrawSprite(pSprite);
 	}
 }
 
@@ -747,6 +847,17 @@ void Engine::Clear(XMFLOAT3& color)
 	ui32 bgr = ToBGR(color);
 	std::fill(m_colorBuffer.begin(), m_colorBuffer.end(), bgr);
 	std::fill(m_depthBuffer.begin(), m_depthBuffer.end(), 1.0f);
+}
+
+void Engine::DrawSprite(SPRITE* pSprite)
+{
+	if ( pSprite==nullptr || pSprite->dead || pSprite->pTexture==nullptr )
+		return;
+
+	int width = pSprite->pTexture->width;
+	int height = pSprite->pTexture->height;
+	byte* dst = (byte*)m_colorBuffer.data();
+	Copy(dst, m_renderWidth, m_renderHeight, pSprite->x, pSprite->y, pSprite->pTexture->rgba, width, height, 0, 0, width, height);
 }
 
 void Engine::DrawSky()
@@ -807,7 +918,7 @@ void Engine::DrawSky()
 	}
 }
 
-void Engine::Draw(ENTITY* pEntity, TILE& tile)
+void Engine::DrawEntity(ENTITY* pEntity, TILE& tile)
 {
 	if ( pEntity==nullptr || pEntity->pMesh==nullptr )
 		return;
@@ -1097,6 +1208,59 @@ void Engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOA
 
 		currentZ += zStep;
 	}
+}
+
+bool Engine::Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8_t* src, int srcW, int srcH, int srcX, int srcY, int w, int h)
+{
+	if ( w<=0 || h<=0 )
+		return false;
+
+	if ( dstX<0 ) { int d = -dstX; dstX = 0; srcX += d; w -= d; }
+	if ( dstY<0 ) { int d = -dstY; dstY = 0; srcY += d; h -= d; }
+	if ( dstX+w>dstW ) w = dstW - dstX;
+	if ( dstY+h>dstH ) h = dstH - dstY;
+	if ( srcX<0 ) { int d = -srcX; srcX = 0; dstX += d; w -= d; }
+	if ( srcY<0 ) { int d = -srcY; srcY = 0; dstY += d; h -= d; }
+	if ( srcX+w>srcW ) w = srcW - srcX;
+	if ( srcY+h>srcH ) h = srcH - srcY;
+
+	if ( w<=0 || h<=0 )
+		return false;
+	
+	const int dstStride = dstW * 4;
+	const int srcStride = srcW * 4;
+	byte* drow = dst + dstY * dstStride + dstX * 4;
+	const byte* srow = src + srcY * srcStride + srcX * 4;
+	for ( int y=0 ; y<h ; ++y )
+	{
+		byte* d = drow;
+		const byte* s = srow;
+		for ( int x=0 ; x<w ; ++x )
+		{
+			const uint8_t sa = s[3];
+			if ( sa==255 )
+			{
+				d[0] = s[0];
+				d[1] = s[1];
+				d[2] = s[2];
+			}
+			else if ( sa!=0 )
+			{
+				const byte a = sa;
+				const byte ia = 255 - a;
+				d[0] = (byte)((s[0] * a + d[0] * ia + 127) / 255);
+				d[1] = (byte)((s[1] * a + d[1] * ia + 127) / 255);
+				d[2] = (byte)((s[2] * a + d[2] * ia + 127) / 255);
+				// d[3] inchangé, ou composité si tu veux
+			}
+			d += 4;
+			s += 4;
+		}
+		drow += dstStride;
+		srow += srcStride;
+	}
+
+	return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
