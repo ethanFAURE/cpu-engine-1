@@ -24,7 +24,6 @@ public:
 	RAY GetCameraRay(XMFLOAT2& pt);
 	CAMERA* GetCamera();
 
-	static XMFLOAT3 ApplyLighting(XMFLOAT3& color, float intensity);
 	static ui32 ToBGR(XMFLOAT3& color);
 	static XMFLOAT3 ToColor(int r, int g, int b);
 	static float Clamp(float v);
@@ -50,8 +49,9 @@ protected:
 	void DrawSky();
 	void Draw(ENTITY* pEntity, TILE& tile);
 	void Present();
+	void FillTriangle(XMFLOAT3* tri, VS_OUT* vo, MATERIAL& material, TILE& tile);
+	static bool PixelShader(PS_OUT& out, const PS_IN& in, const void* data);
 	void DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOAT3& color);
-	void FillTriangle(XMFLOAT3* tri, XMFLOAT3* colors, TILE& tile);
 
 	virtual void OnStart() {}
 	virtual void OnUpdate() {}

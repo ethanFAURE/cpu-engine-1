@@ -161,7 +161,6 @@ ENTITY::ENTITY()
 	sortedIndex = -1;
 	dead = false;
 	pMesh = nullptr;
-	material = Engine::ToColor(255, 255, 255);
 	lifetime = 0.0f;
 	tile = 0;
 	radius = 0.0f;
@@ -223,7 +222,7 @@ XMVECTOR XM_CALLCONV FRUSTUM::NormalizePlane(FXMVECTOR p)
 CAMERA::CAMERA()
 {
 	fov = XM_PIDIV4;
-	near = 0.1f;
+	near = 1.0f;
 	far = 100.0f;
 }
 

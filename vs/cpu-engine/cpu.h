@@ -36,6 +36,9 @@
 
 #include <DirectXMath.h>
 using namespace DirectX;
+inline XMVECTOR XMRIGHT					= g_XMIdentityR0;
+inline XMVECTOR XMUP					= g_XMIdentityR1;
+inline XMVECTOR XMDIR					= g_XMIdentityR2;
 
 // Engine
 ///////////
@@ -45,20 +48,26 @@ using namespace DirectX;
 #undef min
 #undef max
 
-using ui32								= unsigned __int32;
-
-inline XMVECTOR XMRIGHT					= g_XMIdentityR0;
-inline XMVECTOR XMUP					= g_XMIdentityR1;
-inline XMVECTOR XMDIR					= g_XMIdentityR2;
-
-#define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
-#define RELPTR(p)						{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
-
-// Forward declaration
+// Forward declarations
 struct AABB;
 struct CAMERA;
 struct OBB;
+struct PS_IN;
+struct PS_OUT;
 class Engine;
+
+// Types
+using ui32								= unsigned __int32;
+using PS_FUNC							= bool(*)(PS_OUT& out, const PS_IN& in, const void* data);
+
+// Macro
+#define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
+#define RELPTR(p)						{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
+
+// Light
+#define UNLIT							0
+#define GOURAUD							1
+#define LAMBERT							2
 
 // Core
 #include "Keyboard.h"

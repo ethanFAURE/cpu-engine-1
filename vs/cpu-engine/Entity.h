@@ -45,7 +45,8 @@ struct ENTITY
 	MESH* pMesh;
 	TRANSFORM transform;
 	XMFLOAT3 view;
-	XMFLOAT3 material;
+	//XMFLOAT3 material;
+	MATERIAL material;
 	float lifetime;
 	ui32 tile;
 	float radius;

@@ -24,24 +24,11 @@ void Game::OnStart()
 
 	m_pShip = CreateEntity();
 	m_pShip->pMesh = &m_meshShip;
-	m_pShip->transform.pos.z = 10.0f;
+	m_pShip->transform.pos.z = 5.0f;
 	m_pShip->transform.pos.y = -3.0f;
-	m_pShip->material = ToColor(255, 128, 0);
+	m_pShip->material.color = ToColor(255, 128, 0);
 
 	m_camera.transform.pos.z = -5.0f;
-
-	// Debug
-	if ( false )
-	{
-		for ( int i=0 ; i<1000 ; i++ )
-		{
-			ENTITY* pEntity = CreateEntity();
-			pEntity->pMesh = &m_meshShip;
-			pEntity->transform.pos.x = i*0.1f;
-			pEntity->transform.pos.y = i*0.1f;
-			pEntity->transform.pos.z = i*0.1f;
-		}
-	}
 }
 
 void Game::OnUpdate()
@@ -55,7 +42,7 @@ void Game::OnUpdate()
 	m_pShip->transform.pos.z += m_dt * 1.0f;
 
 	// Camera
-	m_camera.transform.AddYPR(0.0f, 0.0f, m_dt*0.1f);
+	//m_camera.transform.AddYPR(0.0f, 0.0f, m_dt*0.1f);
 
 	// Missiles
 	for ( auto it=m_missiles.begin() ; it!=m_missiles.end() ; )
@@ -92,7 +79,7 @@ void Game::OnUpdate()
 		pMissile->transform.SetScaling(0.2f);
 		pMissile->transform.pos = ray.pos;
 		pMissile->transform.LookTo(ray.dir);
-		pMissile->transform.Move(1.0f);
+		//pMissile->transform.Move(1.0f);
 		m_missiles.push_back(pMissile);
 	}
 }

@@ -51,6 +51,7 @@ void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, 
 	wc.lpfnWndProc = WindowProc;
 	wc.hInstance = hInstance;
 	wc.lpszClassName = "RETRO_ENGINE";
+	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 	RegisterClass(&wc);
 	RECT rect = { 0, 0, m_windowWidth, m_windowHeight };
 	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
@@ -337,16 +338,6 @@ CAMERA* Engine::GetCamera()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-XMFLOAT3 Engine::ApplyLighting(XMFLOAT3& color, float intensity)
-{
-	intensity = Clamp(intensity);
-	XMFLOAT3 trg;
-	trg.x = color.x * intensity;
-	trg.y = color.y * intensity;
-	trg.z = color.z * intensity;
-	return trg;
-}
 
 ui32 Engine::ToBGR(XMFLOAT3& color)
 {
@@ -821,72 +812,268 @@ void Engine::Draw(ENTITY* pEntity, TILE& tile)
 
 	// Info
 	XMMATRIX matWorld = XMLoadFloat4x4(&pEntity->transform.world);
-	XMMATRIX matView = XMLoadFloat4x4(&m_camera.matView);
+	XMMATRIX normalMat = XMMatrixTranspose(XMMatrixInverse(nullptr, matWorld));
 	XMMATRIX matViewProj = XMLoadFloat4x4(&m_camera.matViewProj);
 	XMVECTOR lightDir = XMLoadFloat3(&m_lightDir);
+	//lightDir = XMVector3Normalize(lightDir); // already done
 
 	// Vertex and Pixel shaders
-	for ( const TRIANGLE& t : pEntity->pMesh->triangles )
+	for ( const TRIANGLE& triangle : pEntity->pMesh->triangles )
 	{
-		// World space
-		XMVECTOR vWorld[3];
-		for ( int i=0 ; i<3 ; i++ )
-		{
-			XMVECTOR loc = XMLoadFloat3(&t.v[i].pos);
-			loc = XMVectorSetW(loc, 1.0f);
-			vWorld[i] = XMVector3Transform(loc, matWorld);
-		}
-
-		// Screen space
-		XMFLOAT3 vScreen[3];
 		bool safe = true;
-		for ( int i=0 ; i<3 ; i++ )
+		XMFLOAT3 screen[3];
+		VS_OUT out[3];
+		for ( int i=0 ; i<3 ; ++i )
 		{
-			XMVECTOR clip = XMVector3Transform(vWorld[i], matViewProj);
-			XMFLOAT4 out;
-			XMStoreFloat4(&out, clip);
-			if ( out.w<=0.0f )
+			// Vertex
+			const VERTEX& in = triangle.v[i];
+
+			// World pos
+			XMVECTOR loc = XMLoadFloat3(&in.pos);
+			loc = XMVectorSetW(loc, 1.0f);
+			XMVECTOR world = XMVector4Transform(loc, matWorld);
+			XMStoreFloat3(&out[i].worldPos, world);
+
+			// Clip pos
+			XMVECTOR clip = XMVector4Transform(world, matViewProj);
+			XMStoreFloat4(&out[i].clipPos, clip);
+			if ( out[i].clipPos.w<=0.0f )
 			{
 				safe = false;
 				break;
 			}
-			float invW = 1.0f / out.w;
-			float ndcX = out.x * invW;   // [-1,1]
-			float ndcY = out.y * invW;   // [-1,1]
-			float ndcZ = out.z * invW;   // [0,1] avec XMMatrixPerspectiveFovLH
-			ndcZ = Clamp(ndcZ);
-			vScreen[i].x = (ndcX + 1.0f) * m_renderWidthHalf;
-			vScreen[i].y = (1.0f - ndcY) * m_renderHeightHalf;
-			vScreen[i].z = ndcZ;         // profondeur normalisée 0..1
+			out[i].invW = 1.0f / out[i].clipPos.w;
+
+			// World normal
+			XMVECTOR localNormal = XMLoadFloat3(&in.normal);
+			XMVECTOR worldNormal = XMVector3TransformNormal(localNormal, normalMat);
+			worldNormal = XMVector3Normalize(worldNormal);
+			XMStoreFloat3(&out[i].worldNormal, worldNormal);
+
+			// Albedo
+			out[i].albedo.x = Clamp(in.color.x * pEntity->material.color.x);
+			out[i].albedo.y = Clamp(in.color.y * pEntity->material.color.y);
+			out[i].albedo.z = Clamp(in.color.z * pEntity->material.color.z);
+
+			// Intensity
+			float ndotl = XMVectorGetX(XMVector3Dot(worldNormal, lightDir));
+			ndotl = std::max(0.0f, ndotl);
+			out[i].intensity = ndotl + m_ambientLight;
+
+			// Screen pos
+			float ndcX = out[i].clipPos.x * out[i].invW;			// [-1,1]
+			float ndcY = out[i].clipPos.y * out[i].invW;			// [-1,1]
+			float ndcZ = out[i].clipPos.z * out[i].invW;			// [0,1] avec XMMatrixPerspectiveFovLH
+			screen[i].x = (ndcX + 1.0f) * m_renderWidthHalf;
+			screen[i].y = (1.0f - ndcY) * m_renderHeightHalf;
+			screen[i].z = Clamp(ndcZ);								// profondeur normalisée 0..1
 		}
 		if ( safe==false )
 			continue;
 
 		// Culling
-		float area = (vScreen[2].x - vScreen[0].x) * (vScreen[1].y - vScreen[0].y) - (vScreen[2].y - vScreen[0].y) * (vScreen[1].x - vScreen[0].x);
+		float area = (screen[2].x-screen[0].x) * (screen[1].y-screen[0].y) - (screen[2].y-screen[0].y) * (screen[1].x-screen[0].x);
 		if ( area<=0.0f )
 			continue;
 
-		// Color
-		XMFLOAT3 vertColors[3];
-		for ( int i=0 ; i<3 ; i++ )
-		{
-			XMVECTOR localNormal = XMLoadFloat3(&t.v[i].normal);
-			XMVECTOR worldNormal = XMVector3TransformNormal(localNormal, matWorld);
-			worldNormal = XMVector3Normalize(worldNormal);
-			float dot = XMVectorGetX(XMVector3Dot(worldNormal, XMVectorNegate(lightDir)));
-			float intensity = std::max(0.0f, dot) + m_ambientLight;
-			XMFLOAT3 finalColor;
-			finalColor.x = t.v[i].color.x * pEntity->material.x * intensity;
-			finalColor.y = t.v[i].color.y * pEntity->material.y * intensity;
-			finalColor.z = t.v[i].color.z * pEntity->material.z * intensity;
-			vertColors[i] = finalColor;
-		}
-
 		// Draw
-		FillTriangle(vScreen, vertColors, tile);
+		FillTriangle(screen, out, pEntity->material, tile);
 	}
 }
+
+void Engine::FillTriangle(XMFLOAT3* tri, VS_OUT* vo, MATERIAL& material, TILE& tile)
+{
+	const float x1 = tri[0].x, y1 = tri[0].y, z1 = tri[0].z;
+	const float x2 = tri[1].x, y2 = tri[1].y, z2 = tri[1].z;
+	const float x3 = tri[2].x, y3 = tri[2].y, z3 = tri[2].z;
+
+	int minX = (int)floor(std::min(std::min(x1, x2), x3));
+	int maxX = (int)ceil(std::max(std::max(x1, x2), x3));
+	int minY = (int)floor(std::min(std::min(y1, y2), y3));
+	int maxY = (int)ceil(std::max(std::max(y1, y2), y3));
+
+	if ( minX<0 ) minX = 0;
+	if ( minY<0 ) minY = 0;
+	if ( maxX>m_renderWidth ) maxX = m_renderWidth;
+	if ( maxY>m_renderHeight ) maxY = m_renderHeight;
+
+	if ( minX<tile.left ) minX = tile.left;
+	if ( maxX>tile.right ) maxX = tile.right;
+	if ( minY<tile.top ) minY = tile.top;
+	if ( maxY>tile.bottom ) maxY = tile.bottom;
+
+	if ( minX>=maxX || minY>=maxY )
+		return;
+
+	float a12 = y1 - y2;
+	float b12 = x2 - x1;
+	float c12 = x1 * y2 - x2 * y1;
+	float a23 = y2 - y3;
+	float b23 = x3 - x2;
+	float c23 = x2 * y3 - x3 * y2;
+	float a31 = y3 - y1;
+	float b31 = x1 - x3;
+	float c31 = x3 * y1 - x1 * y3;
+	float area = a12 * x3 + b12 * y3 + c12;
+	if ( std::abs(area)<1e-6f )
+		return;
+
+	float invArea = 1.0f / area;
+	bool areaPositive = area>0.0f;
+	float startX = (float)minX + 0.5f;
+	float startY = (float)minY + 0.5f;
+	float e12_row = a12 * startX + b12 * startY + c12;
+	float e23_row = a23 * startX + b23 * startY + c23;
+	float e31_row = a31 * startX + b31 * startY + c31;
+	const float dE12dx = a12;
+	const float dE12dy = b12;
+	const float dE23dx = a23;
+	const float dE23dy = b23;
+	const float dE31dx = a31;
+	const float dE31dy = b31;
+
+	const PS_FUNC ps = material.ps ? material.ps : &PixelShader;
+	for ( int y=minY ; y<maxY ; ++y )
+	{
+		float e12 = e12_row;
+		float e23 = e23_row;
+		float e31 = e31_row;
+		for ( int x=minX ; x<maxX ; ++x )
+		{
+			if ( areaPositive )
+			{
+				if ( e12<0.0f || e23<0.0f || e31<0.0f )
+				{
+					e12 += dE12dx;
+					e23 += dE23dx;
+					e31 += dE31dx;
+					continue;
+				}
+			}
+			else
+			{
+				if ( e12>0.0f || e23>0.0f || e31>0.0f )
+				{
+					e12 += dE12dx;
+					e23 += dE23dx;
+					e31 += dE31dx;
+					continue;
+				}
+			}
+
+			float w1 = e23 * invArea;
+			float w2 = e31 * invArea;
+			float w3 = e12 * invArea;
+			float z = z3 + (z1 - z3) * w1 + (z2 - z3) * w2; // => z1 * w1 + z2 * w2 + z3 * w3
+			int index = y * m_renderWidth + x;
+			if ( z>=m_depthBuffer[index] )
+			{
+				e12 += dE12dx;
+				e23 += dE23dx;
+				e31 += dE31dx;
+				continue;
+			}
+
+			// Input
+			PS_IN in;
+			in.x = x;
+			in.y = y;
+			in.depth = z;
+
+			// Position (lerp)
+			in.pos.x = vo[2].worldPos.x + (vo[0].worldPos.x - vo[2].worldPos.x) * w1 + (vo[1].worldPos.x - vo[2].worldPos.x) * w2;
+			in.pos.y = vo[2].worldPos.y + (vo[0].worldPos.y - vo[2].worldPos.y) * w1 + (vo[1].worldPos.y - vo[2].worldPos.y) * w2;
+			in.pos.z = vo[2].worldPos.z + (vo[0].worldPos.z - vo[2].worldPos.z) * w1 + (vo[1].worldPos.z - vo[2].worldPos.z) * w2;
+
+			// Normal (lerp)
+			in.normal.x = vo[2].worldNormal.x + (vo[0].worldNormal.x - vo[2].worldNormal.x) * w1 + (vo[1].worldNormal.x - vo[2].worldNormal.x) * w2;
+			in.normal.y = vo[2].worldNormal.y + (vo[0].worldNormal.y - vo[2].worldNormal.y) * w1 + (vo[1].worldNormal.y - vo[2].worldNormal.y) * w2;
+			in.normal.z = vo[2].worldNormal.z + (vo[0].worldNormal.z - vo[2].worldNormal.z) * w1 + (vo[1].worldNormal.z - vo[2].worldNormal.z) * w2;
+
+			// Color (lerp)
+			in.albedo.x = vo[2].albedo.x + (vo[0].albedo.x - vo[2].albedo.x) * w1 + (vo[1].albedo.x - vo[2].albedo.x) * w2;
+			in.albedo.y = vo[2].albedo.y + (vo[0].albedo.y - vo[2].albedo.y) * w1 + (vo[1].albedo.y - vo[2].albedo.y) * w2;
+			in.albedo.z = vo[2].albedo.z + (vo[0].albedo.z - vo[2].albedo.z) * w1 + (vo[1].albedo.z - vo[2].albedo.z) * w2;
+
+			// Lighting
+			if ( material.lighting==GOURAUD )
+			{
+				float intensity = vo[2].intensity + (vo[0].intensity - vo[2].intensity) * w1 + (vo[1].intensity - vo[2].intensity) * w2;
+				in.color.x = in.albedo.x * intensity;
+				in.color.y = in.albedo.y * intensity;
+				in.color.z = in.albedo.z * intensity;
+			}
+			else if ( material.lighting==LAMBERT )
+			{
+				XMVECTOR n = XMLoadFloat3(&in.normal);
+				// Expensive (better results)
+				//n = XMVector3Normalize(n);
+				XMVECTOR l = XMLoadFloat3(&Engine::Instance()->m_lightDir);
+				float ndotl = XMVectorGetX(XMVector3Dot(n, l));
+				if ( ndotl<0.0f )
+					ndotl = 0.0f;
+				float intensity = ndotl + Engine::Instance()->m_ambientLight;
+				in.color.x = in.albedo.x * intensity;
+				in.color.y = in.albedo.y * intensity;
+				in.color.z = in.albedo.z * intensity;
+			}
+			else
+				in.color = in.albedo;
+
+			// Output
+			PS_OUT out;
+			bool discard = ps(out, in, material.data);
+			if ( discard==false )
+			{
+				m_depthBuffer[index] = z;
+				m_colorBuffer[index] = RGB(Clamp(int(out.color.z*255.0f), 0, 255), Clamp(int(out.color.y*255.0f), 0, 255), Clamp(int(out.color.x*255.0f), 0, 255));
+			}
+
+			e12 += dE12dx;
+			e23 += dE23dx;
+			e31 += dE31dx;
+		}
+
+		e12_row += dE12dy;
+		e23_row += dE23dy;
+		e31_row += dE31dy;
+	}
+}
+
+bool Engine::PixelShader(PS_OUT& out, const PS_IN& in, const void* data)
+{
+	out.color = in.color;
+	return false;
+}
+
+//bool Engine::PS_Gouraud(PS_OUT& out, const PS_IN& in, const void* data)
+//{
+//	int r = Clamp((int)(in.albedo.z*in.intensity*255.0f), 0, 255);
+//	int g = Clamp((int)(in.albedo.y*in.intensity*255.0f), 0, 255);
+//	int b = Clamp((int)(in.albedo.x*in.intensity*255.0f), 0, 255);
+//	out.color = RGB(r, g, b);
+//	return false;
+//}
+//
+//bool Engine::PS_Lambert(PS_OUT& out, const PS_IN& in, const void* data)
+//{
+//	XMVECTOR n = XMLoadFloat3(&in.normal);
+//
+//	// Expensive (better results)
+//	//n = XMVector3Normalize(n);
+//
+//	XMVECTOR l = XMLoadFloat3(&Engine::Instance()->m_lightDir);
+//	float ndotl = XMVectorGetX(XMVector3Dot(n, l));
+//	if ( ndotl<0.0f )
+//		ndotl = 0.0f;
+//
+//	float intensity = ndotl + Engine::Instance()->m_ambientLight;
+//	int r = Clamp((int)(in.albedo.z*intensity*255.0f), 0, 255);
+//	int g = Clamp((int)(in.albedo.y*intensity*255.0f), 0, 255);
+//	int b = Clamp((int)(in.albedo.x*intensity*255.0f), 0, 255);
+//	out.color = RGB(r, g, b);
+//	return false;
+//}
 
 void Engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOAT3& color)
 {
@@ -933,123 +1120,6 @@ void Engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOA
 		}
 
 		currentZ += zStep;
-	}
-}
-
-void Engine::FillTriangle(XMFLOAT3* tri, XMFLOAT3* colors, TILE& tile)
-{
-	const float x1 = tri[0].x, y1 = tri[0].y, z1 = tri[0].z;
-	const float x2 = tri[1].x, y2 = tri[1].y, z2 = tri[1].z;
-	const float x3 = tri[2].x, y3 = tri[2].y, z3 = tri[2].z;
-
-	int minX = (int)floor(std::min(std::min(x1, x2), x3));
-	int maxX = (int)ceil(std::max(std::max(x1, x2), x3));
-	int minY = (int)floor(std::min(std::min(y1, y2), y3));
-	int maxY = (int)ceil(std::max(std::max(y1, y2), y3));
-
-	if ( minX<0 )
-		minX = 0;
-	if ( minY<0 )
-		minY = 0;
-	if ( maxX>m_renderWidth )
-		maxX = m_renderWidth;
-	if ( maxY>m_renderHeight )
-		maxY = m_renderHeight;
-
-	if ( minX<tile.left )
-		minX = tile.left;
-	if ( maxX>tile.right )
-		maxX = tile.right;
-	if ( minY<tile.top )
-		minY = tile.top;
-	if ( maxY>tile.bottom )
-		maxY = tile.bottom;
-
-	if ( minX>=maxX || minY>=maxY )
-		return;
-
-	float a12 = y1 - y2;
-	float b12 = x2 - x1;
-	float c12 = x1 * y2 - x2 * y1;
-	float a23 = y2 - y3;
-	float b23 = x3 - x2;
-	float c23 = x2 * y3 - x3 * y2;
-	float a31 = y3 - y1;
-	float b31 = x1 - x3;
-	float c31 = x3 * y1 - x1 * y3;
-	float area = a12 * x3 + b12 * y3 + c12;
-	if ( std::abs(area)<1e-6f )
-		return;
-
-	float invArea = 1.0f / area;
-	bool areaPositive = area>0.0f;
-	float startX = (float)minX + 0.5f;
-	float startY = (float)minY + 0.5f;
-	float e12_row = a12 * startX + b12 * startY + c12;
-	float e23_row = a23 * startX + b23 * startY + c23;
-	float e31_row = a31 * startX + b31 * startY + c31;
-	const float dE12dx = a12;
-	const float dE12dy = b12;
-	const float dE23dx = a23;
-	const float dE23dy = b23;
-	const float dE31dx = a31;
-	const float dE31dy = b31;
-
-	for ( int y=minY ; y<maxY ; ++y )
-	{
-		float e12 = e12_row;
-		float e23 = e23_row;
-		float e31 = e31_row;
-		for ( int x=minX ; x<maxX ; ++x )
-		{
-			if ( areaPositive )
-			{
-				if ( e12<0.0f || e23<0.0f || e31<0.0f )
-				{
-					e12 += dE12dx;
-					e23 += dE23dx;
-					e31 += dE31dx;
-					continue;
-				}
-			}
-			else
-			{
-				if ( e12>0.0f || e23>0.0f || e31>0.0f )
-				{
-					e12 += dE12dx;
-					e23 += dE23dx;
-					e31 += dE31dx;
-					continue;
-				}
-			}
-
-			float w1 = e23 * invArea;
-			float w2 = e31 * invArea;
-			float w3 = e12 * invArea;
-			float z = z1 * w1 + z2 * w2 + z3 * w3;
-			int index = y * m_renderWidth + x;
-			if ( z>=m_depthBuffer[index] )
-			{
-				e12 += dE12dx;
-				e23 += dE23dx;
-				e31 += dE31dx;
-				continue;
-			}
-			m_depthBuffer[index] = z;
-
-			float r = Clamp(colors[0].x * w1 + colors[1].x * w2 + colors[2].x * w3);
-			float g = Clamp(colors[0].y * w1 + colors[1].y * w2 + colors[2].y * w3);
-			float b = Clamp(colors[0].z * w1 + colors[1].z * w2 + colors[2].z * w3);
-			m_colorBuffer[index] = RGB((int)(b*255.0f), (int)(g*255.0f), (int)(r*255.0f));
-
-			e12 += dE12dx;
-			e23 += dE23dx;
-			e31 += dE31dx;
-		}
-
-		e12_row += dE12dy;
-		e23_row += dE23dy;
-		e31_row += dE31dy;
 	}
 }
 
