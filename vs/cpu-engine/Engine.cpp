@@ -38,7 +38,7 @@ Engine* Engine::Instance()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart)
+void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart, bool bilinear)
 {
 	if ( m_hInstance )
 		return;
@@ -47,6 +47,7 @@ void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, 
 	m_hInstance = hInstance;
 	m_windowWidth = (int)(renderWidth*windowScaleAtStart);
 	m_windowHeight = (int)(renderHeight*windowScaleAtStart);
+	m_bilinear = bilinear;
 	WNDCLASS wc = { 0 };
 	wc.lpfnWndProc = WindowProc;
 	wc.hInstance = hInstance;
@@ -714,8 +715,10 @@ void Engine::Present()
 	m_pRenderTarget->BeginDraw();
 	m_pBitmap->CopyFromMemory(NULL, m_colorBuffer.data(), m_renderWidth * 4);
 	D2D1_RECT_F destRect = D2D1::RectF(0.0f, 0.0f, (float)m_windowWidth, (float)m_windowHeight);
-	m_pRenderTarget->DrawBitmap(m_pBitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, NULL);
-	//m_pRenderTarget->DrawBitmap(m_pBitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, NULL);
+	if ( m_bilinear )
+		m_pRenderTarget->DrawBitmap(m_pBitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, NULL);
+	else
+		m_pRenderTarget->DrawBitmap(m_pBitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, NULL);
 	HRESULT hr = m_pRenderTarget->EndDraw();
 	if ( hr==D2DERR_RECREATE_TARGET )
 	{
@@ -803,23 +806,19 @@ void Engine::Draw(ENTITY* pEntity, TILE& tile)
 	if ( pEntity==nullptr || pEntity->pMesh==nullptr )
 		return;
 
-	// Clipping
 	if ( m_camera.frustum.Intersect(pEntity->transform.pos, pEntity->radius)==false )
 	{
 		m_clipEntityCount++;
 		return;
 	}
 
-	// Info
 	XMMATRIX matWorld = XMLoadFloat4x4(&pEntity->transform.world);
 	XMMATRIX normalMat = XMMatrixTranspose(XMMatrixInverse(nullptr, matWorld));
 	XMMATRIX matViewProj = XMLoadFloat4x4(&m_camera.matViewProj);
 	XMVECTOR lightDir = XMLoadFloat3(&m_lightDir);
-	//lightDir = XMVector3Normalize(lightDir); // already done
-
-	// Vertex and Pixel shaders
 	for ( const TRIANGLE& triangle : pEntity->pMesh->triangles )
 	{
+		// Verter shader
 		bool safe = true;
 		XMFLOAT3 screen[3];
 		VS_OUT out[3];
@@ -876,7 +875,7 @@ void Engine::Draw(ENTITY* pEntity, TILE& tile)
 		if ( area<=0.0f )
 			continue;
 
-		// Draw
+		// Pixel shader
 		FillTriangle(screen, out, pEntity->material, tile);
 	}
 }

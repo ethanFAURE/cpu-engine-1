@@ -79,7 +79,6 @@ void Game::OnUpdate()
 		pMissile->transform.SetScaling(0.2f);
 		pMissile->transform.pos = ray.pos;
 		pMissile->transform.LookTo(ray.dir);
-		//pMissile->transform.Move(1.0f);
 		m_missiles.push_back(pMissile);
 	}
 }

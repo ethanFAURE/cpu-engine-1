@@ -10,7 +10,7 @@ public:
 	virtual ~Engine();
 	static Engine* Instance();
 
-	void Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart = 1.0f);
+	void Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart = 1.0f, bool hardwareBilinear = false);
 	void Uninitialize();
 	void Run();
 	void FixWindow();
@@ -76,6 +76,7 @@ protected:
 	HWND m_hWnd;
 	int m_windowWidth;
 	int m_windowHeight;
+	bool m_bilinear;
 
 	// Surface
 #ifdef GPU_PRESENT
