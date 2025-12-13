@@ -15,6 +15,7 @@ public:
 protected:
 	MESH m_meshShip;
 	MESH m_meshCube;
+	MATERIAL m_materialShip;
 	ENTITY* m_pShip;
 	std::list<ENTITY*> m_missiles;
 

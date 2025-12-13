@@ -161,6 +161,7 @@ ENTITY::ENTITY()
 	sortedIndex = -1;
 	dead = false;
 	pMesh = nullptr;
+	pMaterial = nullptr;
 	lifetime = 0.0f;
 	tile = 0;
 	radius = 0.0f;

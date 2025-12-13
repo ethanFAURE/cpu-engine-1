@@ -88,7 +88,7 @@ void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, 
 	// Light
 	m_lightDir = { 0.5f, -1.0f, 0.5f };
 	XMStoreFloat3(&m_lightDir, XMVector3Normalize(XMLoadFloat3(&m_lightDir)));
-	m_ambientLight = 0.2f;
+	m_ambient = 0.2f;
 
 	// Entity
 	m_entityCount = 0;
@@ -818,6 +818,7 @@ void Engine::Draw(ENTITY* pEntity, TILE& tile)
 		return;
 	}
 
+	MATERIAL& material = pEntity->pMaterial ? *pEntity->pMaterial : m_material;
 	XMMATRIX matWorld = XMLoadFloat4x4(&pEntity->transform.world);
 	XMMATRIX normalMat = XMMatrixTranspose(XMMatrixInverse(nullptr, matWorld));
 	XMMATRIX matViewProj = XMLoadFloat4x4(&m_camera.matViewProj);
@@ -856,14 +857,14 @@ void Engine::Draw(ENTITY* pEntity, TILE& tile)
 			XMStoreFloat3(&out[i].worldNormal, worldNormal);
 
 			// Albedo
-			out[i].albedo.x = Clamp(in.color.x * pEntity->material.color.x);
-			out[i].albedo.y = Clamp(in.color.y * pEntity->material.color.y);
-			out[i].albedo.z = Clamp(in.color.z * pEntity->material.color.z);
+			out[i].albedo.x = Clamp(in.color.x * material.color.x);
+			out[i].albedo.y = Clamp(in.color.y * material.color.y);
+			out[i].albedo.z = Clamp(in.color.z * material.color.z);
 
 			// Intensity
 			float ndotl = XMVectorGetX(XMVector3Dot(worldNormal, lightDir));
 			ndotl = std::max(0.0f, ndotl);
-			out[i].intensity = ndotl + m_ambientLight;
+			out[i].intensity = ndotl + m_ambient;
 
 			// Screen pos
 			float ndcX = out[i].clipPos.x * out[i].invW;			// [-1,1]
@@ -882,7 +883,7 @@ void Engine::Draw(ENTITY* pEntity, TILE& tile)
 			continue;
 
 		// Pixel shader
-		FillTriangle(screen, out, pEntity->material, tile);
+		FillTriangle(screen, out, material, tile);
 	}
 }
 
@@ -1016,7 +1017,7 @@ void Engine::FillTriangle(XMFLOAT3* tri, VERTEXSHADER* vo, MATERIAL& material, T
 				float ndotl = XMVectorGetX(XMVector3Dot(n, l));
 				if ( ndotl<0.0f )
 					ndotl = 0.0f;
-				float intensity = ndotl + Engine::Instance()->m_ambientLight;
+				float intensity = ndotl + Engine::Instance()->m_ambient;
 				in.color.x = in.albedo.x * intensity;
 				in.color.y = in.albedo.y * intensity;
 				in.color.z = in.albedo.z * intensity;

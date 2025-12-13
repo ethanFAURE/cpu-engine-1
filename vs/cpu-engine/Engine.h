@@ -116,7 +116,8 @@ protected:
 
 	// Light
 	XMFLOAT3 m_lightDir;
-	float m_ambientLight;
+	float m_ambient;
+	MATERIAL m_material;
 	
 	// Time
 	DWORD m_systime;

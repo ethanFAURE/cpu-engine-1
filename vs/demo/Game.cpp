@@ -20,13 +20,15 @@ void Game::OnStart()
 	CreateSpaceship(m_meshShip);
 	CreateCube(m_meshCube);
 
+	m_materialShip.color = ToColor(255, 128, 0);
+
 	m_missileSpeed = 10.0f;
 
 	m_pShip = CreateEntity();
 	m_pShip->pMesh = &m_meshShip;
 	m_pShip->transform.pos.z = 5.0f;
 	m_pShip->transform.pos.y = -3.0f;
-	m_pShip->material.color = ToColor(255, 128, 0);
+	m_pShip->pMaterial = &m_materialShip;
 
 	m_camera.transform.pos.z = -5.0f;
 }
