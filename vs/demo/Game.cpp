@@ -28,7 +28,7 @@ void Game::OnStart()
 	m_pShip->transform.pos.y = -3.0f;
 	m_pShip->material = ToColor(255, 128, 0);
 
-	m_camera.pos.z = -5.0f;
+	m_camera.transform.pos.z = -5.0f;
 
 	// Debug
 	if ( false )
@@ -55,7 +55,7 @@ void Game::OnUpdate()
 	m_pShip->transform.pos.z += m_dt * 1.0f;
 
 	// Camera
-	m_camera.AddYPR(0.0f, 0.0f, m_dt*0.1f);
+	m_camera.transform.AddYPR(0.0f, 0.0f, m_dt*0.1f);
 
 	// Missiles
 	for ( auto it=m_missiles.begin() ; it!=m_missiles.end() ; )
@@ -84,9 +84,9 @@ void Game::OnUpdate()
 	}
 	if ( m_keyboard.IsKeyDown(VK_LBUTTON) )
 	{
-		DirectX::XMFLOAT2 pt;
+		XMFLOAT2 pt;
 		GetCursor(pt);
-		RAY ray = ToRay(pt);
+		RAY ray = GetCameraRay(pt);
 		ENTITY* pMissile = CreateEntity();
 		pMissile->pMesh = &m_meshCube;
 		pMissile->transform.SetScaling(0.2f);

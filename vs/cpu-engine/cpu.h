@@ -11,6 +11,8 @@
 #include <windows.h>
 #undef min
 #undef max
+#undef near
+#undef far
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
@@ -27,6 +29,7 @@
 ////////////
 
 #include <DirectXMath.h>
+using namespace DirectX;
 
 //#define GPU_PRESENT
 #ifdef GPU_PRESENT
@@ -39,18 +42,18 @@
 
 using ui32								= unsigned __int32;
 
-inline DirectX::XMVECTOR XMRIGHT		= DirectX::g_XMIdentityR0;
-inline DirectX::XMVECTOR XMUP			= DirectX::g_XMIdentityR1;
-inline DirectX::XMVECTOR XMDIR			= DirectX::g_XMIdentityR2;
+inline XMVECTOR XMRIGHT					= g_XMIdentityR0;
+inline XMVECTOR XMUP					= g_XMIdentityR1;
+inline XMVECTOR XMDIR					= g_XMIdentityR2;
 
 #define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
 #define RELPTR(p)						{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
 
 // Forward declaration
 struct AABB;
+struct CAMERA;
 struct OBB;
 class Engine;
-class Game;
 
 // Core
 #include "Keyboard.h"

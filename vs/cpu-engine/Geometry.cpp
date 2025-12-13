@@ -84,7 +84,7 @@ void AABB::Zero()
 	max = { 0.0f, 0.0f, 0.0f };
 }
 
-bool XM_CALLCONV AABB::ToScreen(RECTANGLE& out, DirectX::FXMMATRIX wvp, float renderWidth, float renderHeight)
+bool XM_CALLCONV AABB::ToScreen(RECTANGLE& out, FXMMATRIX wvp, float renderWidth, float renderHeight)
 {
 	const float renderX = 0.0f;
 	const float renderY = 0.0f;
@@ -98,29 +98,29 @@ bool XM_CALLCONV AABB::ToScreen(RECTANGLE& out, DirectX::FXMMATRIX wvp, float re
 	const float ymax = max.y;
 	const float zmax = max.z;
 
-	const DirectX::XMVECTOR pts[8] =
+	const XMVECTOR pts[8] =
 	{
-		DirectX::XMVectorSet(xmin, ymin, zmin, 1.0f),
-		DirectX::XMVectorSet(xmax, ymin, zmin, 1.0f),
-		DirectX::XMVectorSet(xmax, ymax, zmin, 1.0f),
-		DirectX::XMVectorSet(xmin, ymax, zmin, 1.0f),
-		DirectX::XMVectorSet(xmin, ymin, zmax, 1.0f),
-		DirectX::XMVectorSet(xmax, ymin, zmax, 1.0f),
-		DirectX::XMVectorSet(xmax, ymax, zmax, 1.0f),
-		DirectX::XMVectorSet(xmin, ymax, zmax, 1.0f)
+		XMVectorSet(xmin, ymin, zmin, 1.0f),
+		XMVectorSet(xmax, ymin, zmin, 1.0f),
+		XMVectorSet(xmax, ymax, zmin, 1.0f),
+		XMVectorSet(xmin, ymax, zmin, 1.0f),
+		XMVectorSet(xmin, ymin, zmax, 1.0f),
+		XMVectorSet(xmax, ymin, zmax, 1.0f),
+		XMVectorSet(xmax, ymax, zmax, 1.0f),
+		XMVectorSet(xmin, ymax, zmax, 1.0f)
 	};
 
 	for ( int i=0 ; i<8 ; ++i )
 	{
-		DirectX::XMVECTOR clip = XMVector4Transform(pts[i], wvp);
+		XMVECTOR clip = XMVector4Transform(pts[i], wvp);
 
-		float w = DirectX::XMVectorGetW(clip);
+		float w = XMVectorGetW(clip);
 		if ( w<=0.00001f )
 			continue; // derrière caméra
 
 		float invW = 1.0f / w;
-		float ndcX = DirectX::XMVectorGetX(clip) * invW;
-		float ndcY = DirectX::XMVectorGetY(clip) * invW;
+		float ndcX = XMVectorGetX(clip) * invW;
+		float ndcY = XMVectorGetY(clip) * invW;
 
 		float sx = renderX + (ndcX * 0.5f + 0.5f) * renderWidth;
 		float sy = renderY + (-ndcY * 0.5f + 0.5f) * renderHeight;
@@ -175,11 +175,11 @@ void OBB::Zero()
 		pts[i] = { 0.0f, 0.0f, 0.0f };
 }
 
-void XM_CALLCONV OBB::Transform(DirectX::FXMMATRIX m)
+void XM_CALLCONV OBB::Transform(FXMMATRIX m)
 {
 	for ( int i=0 ; i<8 ; ++i )
 	{
-		DirectX::XMVECTOR p = XMLoadFloat3(&pts[i]);
+		XMVECTOR p = XMLoadFloat3(&pts[i]);
 		p = XMVector3TransformCoord(p, m);
 		XMStoreFloat3(&pts[i], p);
 	}
@@ -215,7 +215,7 @@ void MESH::Clear()
 	aabb.Zero();
 }
 
-void MESH::AddTriangle(DirectX::XMFLOAT3& a, DirectX::XMFLOAT3& b, DirectX::XMFLOAT3& c, DirectX::XMFLOAT3& color)
+void MESH::AddTriangle(XMFLOAT3& a, XMFLOAT3& b, XMFLOAT3& c, XMFLOAT3& color)
 {
 	TRIANGLE t;
 	t.v[0].pos = a;
@@ -227,7 +227,7 @@ void MESH::AddTriangle(DirectX::XMFLOAT3& a, DirectX::XMFLOAT3& b, DirectX::XMFL
 	triangles.push_back(t);
 }
 
-void MESH::AddFace(DirectX::XMFLOAT3& a, DirectX::XMFLOAT3& b, DirectX::XMFLOAT3& c, DirectX::XMFLOAT3& d, DirectX::XMFLOAT3& color)
+void MESH::AddFace(XMFLOAT3& a, XMFLOAT3& b, XMFLOAT3& c, XMFLOAT3& d, XMFLOAT3& color)
 {
 	AddTriangle(a, c, b, color);
 	AddTriangle(a, d, c, color);
@@ -241,36 +241,36 @@ void MESH::Optimize()
 
 void MESH::CalculateNormals()
 {
-	std::map<DirectX::XMFLOAT3, DirectX::XMVECTOR, VEC3_CMP> normalAccumulator;
+	std::map<XMFLOAT3, XMVECTOR, VEC3_CMP> normalAccumulator;
 	for ( TRIANGLE& t : triangles )
 	{
-		DirectX::XMVECTOR p0 = DirectX::XMLoadFloat3(&t.v[0].pos);
-		DirectX::XMVECTOR p1 = DirectX::XMLoadFloat3(&t.v[1].pos);
-		DirectX::XMVECTOR p2 = DirectX::XMLoadFloat3(&t.v[2].pos);
+		XMVECTOR p0 = XMLoadFloat3(&t.v[0].pos);
+		XMVECTOR p1 = XMLoadFloat3(&t.v[1].pos);
+		XMVECTOR p2 = XMLoadFloat3(&t.v[2].pos);
 
-		DirectX::XMVECTOR edge1 = DirectX::XMVectorSubtract(p1, p0);
-		DirectX::XMVECTOR edge2 = DirectX::XMVectorSubtract(p2, p0);
-		DirectX::XMVECTOR faceNormal = DirectX::XMVector3Cross(edge1, edge2);
+		XMVECTOR edge1 = XMVectorSubtract(p1, p0);
+		XMVECTOR edge2 = XMVectorSubtract(p2, p0);
+		XMVECTOR faceNormal = XMVector3Cross(edge1, edge2);
 		
 		if ( normalAccumulator.count(t.v[0].pos)==0 )
-			normalAccumulator[t.v[0].pos] = DirectX::XMVectorZero();
+			normalAccumulator[t.v[0].pos] = XMVectorZero();
 		if ( normalAccumulator.count(t.v[1].pos)==0 )
-			normalAccumulator[t.v[1].pos] = DirectX::XMVectorZero();
+			normalAccumulator[t.v[1].pos] = XMVectorZero();
 		if ( normalAccumulator.count(t.v[2].pos)==0 )
-			normalAccumulator[t.v[2].pos] = DirectX::XMVectorZero();
+			normalAccumulator[t.v[2].pos] = XMVectorZero();
 
-		normalAccumulator[t.v[0].pos] = DirectX::XMVectorAdd(normalAccumulator[t.v[0].pos], faceNormal);
-		normalAccumulator[t.v[1].pos] = DirectX::XMVectorAdd(normalAccumulator[t.v[1].pos], faceNormal);
-		normalAccumulator[t.v[2].pos] = DirectX::XMVectorAdd(normalAccumulator[t.v[2].pos], faceNormal);
+		normalAccumulator[t.v[0].pos] = XMVectorAdd(normalAccumulator[t.v[0].pos], faceNormal);
+		normalAccumulator[t.v[1].pos] = XMVectorAdd(normalAccumulator[t.v[1].pos], faceNormal);
+		normalAccumulator[t.v[2].pos] = XMVectorAdd(normalAccumulator[t.v[2].pos], faceNormal);
 	}
 
 	for ( TRIANGLE& t : triangles )
 	{
 		for ( int i=0 ; i<3 ; i++ )
 		{
-			DirectX::XMVECTOR sumNormal = normalAccumulator[t.v[i].pos];
-			sumNormal = DirectX::XMVector3Normalize(sumNormal);
-			DirectX::XMStoreFloat3(&t.v[i].normal, sumNormal);
+			XMVECTOR sumNormal = normalAccumulator[t.v[i].pos];
+			sumNormal = XMVector3Normalize(sumNormal);
+			XMStoreFloat3(&t.v[i].normal, sumNormal);
 		}
 	}
 }

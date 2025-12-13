@@ -12,20 +12,20 @@ void TRANSFORM::Identity()
 	ResetRotation();
 }
 
-void TRANSFORM::UpdateWorld()
+void TRANSFORM::Update()
 {
-	DirectX::XMVECTOR s = XMLoadFloat3(&sca);
-	DirectX::XMVECTOR p = XMLoadFloat3(&pos);
+	XMVECTOR s = XMLoadFloat3(&sca);
+	XMVECTOR p = XMLoadFloat3(&pos);
 
-	DirectX::XMVECTOR sx = DirectX::XMVectorSplatX(s);
-	DirectX::XMVECTOR sy = DirectX::XMVectorSplatY(s);
-	DirectX::XMVECTOR sz = DirectX::XMVectorSplatZ(s);
+	XMVECTOR sx = XMVectorSplatX(s);
+	XMVECTOR sy = XMVectorSplatY(s);
+	XMVECTOR sz = XMVectorSplatZ(s);
 
-	DirectX::XMMATRIX w = XMLoadFloat4x4(&rot);
-	w.r[0] = DirectX::XMVectorMultiply(w.r[0], sx);
-	w.r[1] = DirectX::XMVectorMultiply(w.r[1], sy);
-	w.r[2] = DirectX::XMVectorMultiply(w.r[2], sz);
-	w.r[3] = DirectX::XMVectorSetW(p, 1.0f);
+	XMMATRIX w = XMLoadFloat4x4(&rot);
+	w.r[0] = XMVectorMultiply(w.r[0], sx);
+	w.r[1] = XMVectorMultiply(w.r[1], sy);
+	w.r[2] = XMVectorMultiply(w.r[2], sz);
+	w.r[3] = XMVectorSetW(p, 1.0f);
 
 	XMStoreFloat4x4(&world, w);
 }
@@ -57,7 +57,7 @@ void TRANSFORM::ResetRotation()
 	right = { 1.0f, 0.0f, 0.0f };
 	up = { 0.0f, 1.0f, 0.0f };
 	quat = { 0.0f, 0.0f, 0.0f, 1.0f };
-	XMStoreFloat4x4(&rot, DirectX::XMMatrixIdentity());
+	XMStoreFloat4x4(&rot, XMMatrixIdentity());
 }
 
 void TRANSFORM::SetRotation(TRANSFORM& transform)
@@ -77,21 +77,21 @@ void TRANSFORM::SetYPR(float yaw, float pitch, float roll)
 
 void TRANSFORM::AddYPR(float yaw, float pitch, float roll)
 {
-	DirectX::XMVECTOR axisDir = XMLoadFloat3(&dir);
-	DirectX::XMVECTOR axisRight = XMLoadFloat3(&right);
-	DirectX::XMVECTOR axisUp = XMLoadFloat3(&up);
+	XMVECTOR axisDir = XMLoadFloat3(&dir);
+	XMVECTOR axisRight = XMLoadFloat3(&right);
+	XMVECTOR axisUp = XMLoadFloat3(&up);
 
-	DirectX::XMVECTOR qRot = XMLoadFloat4(&quat);
+	XMVECTOR qRot = XMLoadFloat4(&quat);
 	if ( roll )
-		qRot = DirectX::XMQuaternionMultiply(qRot, DirectX::XMQuaternionRotationAxis(axisDir, roll));
+		qRot = XMQuaternionMultiply(qRot, XMQuaternionRotationAxis(axisDir, roll));
 	if ( pitch )
-		qRot = DirectX::XMQuaternionMultiply(qRot, DirectX::XMQuaternionRotationAxis(axisRight, pitch));
+		qRot = XMQuaternionMultiply(qRot, XMQuaternionRotationAxis(axisRight, pitch));
 	if ( yaw )
-		qRot = DirectX::XMQuaternionMultiply(qRot, DirectX::XMQuaternionRotationAxis(axisUp, yaw));
+		qRot = XMQuaternionMultiply(qRot, XMQuaternionRotationAxis(axisUp, yaw));
 
 	XMStoreFloat4(&quat, qRot);
 
-	DirectX::XMMATRIX mRot = DirectX::XMMatrixRotationQuaternion(qRot);
+	XMMATRIX mRot = XMMatrixRotationQuaternion(qRot);
 	XMStoreFloat4x4(&rot, mRot);
 
 	right.x = rot._11;
@@ -107,13 +107,13 @@ void TRANSFORM::AddYPR(float yaw, float pitch, float roll)
 
 void TRANSFORM::LookAt(float x, float y, float z)
 {
-	DirectX::XMVECTOR vA = XMLoadFloat3(&pos);
-	DirectX::XMVECTOR vB = DirectX::XMVectorSet(x, y, z, 0.0f);
-	DirectX::XMVECTOR vDir = DirectX::XMVectorSubtract(vB, vA);
-	const DirectX::XMMATRIX cam = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookAtLH(DirectX::XMVectorZero(), vDir, XMUP));
+	XMVECTOR vA = XMLoadFloat3(&pos);
+	XMVECTOR vB = XMVectorSet(x, y, z, 0.0f);
+	XMVECTOR vDir = XMVectorSubtract(vB, vA);
+	const XMMATRIX cam = XMMatrixTranspose(XMMatrixLookAtLH(XMVectorZero(), vDir, XMUP));
 	XMStoreFloat4x4(&rot, cam);
 
-	XMStoreFloat4(&quat, DirectX::XMQuaternionRotationMatrix(cam));
+	XMStoreFloat4(&quat, XMQuaternionRotationMatrix(cam));
 
 	right.x = rot._11;
 	right.y = rot._12;
@@ -128,11 +128,11 @@ void TRANSFORM::LookAt(float x, float y, float z)
 
 void TRANSFORM::LookTo(float ndx, float ndy, float ndz)
 {
-	DirectX::XMVECTOR vDir = DirectX::XMVectorSet(ndx, ndy, ndz, 0.0f);
-	DirectX::XMMATRIX cam = DirectX::XMMatrixTranspose(DirectX::XMMatrixLookToLH(DirectX::XMVectorZero(), vDir, XMUP));
+	XMVECTOR vDir = XMVectorSet(ndx, ndy, ndz, 0.0f);
+	XMMATRIX cam = XMMatrixTranspose(XMMatrixLookToLH(XMVectorZero(), vDir, XMUP));
 	XMStoreFloat4x4(&rot, cam);
 
-	XMStoreFloat4(&quat, DirectX::XMQuaternionRotationMatrix(cam));
+	XMStoreFloat4(&quat, XMQuaternionRotationMatrix(cam));
 
 	right.x = rot._11;
 	right.y = rot._12;
@@ -145,7 +145,7 @@ void TRANSFORM::LookTo(float ndx, float ndy, float ndz)
 	dir.z = rot._33;
 }
 
-void TRANSFORM::LookTo(DirectX::XMFLOAT3& ndir)
+void TRANSFORM::LookTo(XMFLOAT3& ndir)
 {
 	LookTo(ndir.x, ndir.y, ndir.z);
 }
@@ -163,4 +163,30 @@ ENTITY::ENTITY()
 	material = Engine::ToColor(255, 255, 255);
 	lifetime = 0.0f;
 	tile = 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CAMERA::CAMERA()
+{
+	fov = XM_PIDIV4;
+	near = 0.1f;
+	far = 100.0f;
+}
+
+void CAMERA::UpdateProjection(float aspectRatio)
+{
+	XMStoreFloat4x4(&matProj, XMMatrixPerspectiveFovLH(fov, aspectRatio, near, far));
+}
+
+void CAMERA::Update()
+{
+	transform.Update();
+
+	XMMATRIX mat = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
+	XMStoreFloat4x4(&matView, mat);
+	mat *= XMLoadFloat4x4(&matProj);
+	XMStoreFloat4x4(&matViewProj, mat);
 }

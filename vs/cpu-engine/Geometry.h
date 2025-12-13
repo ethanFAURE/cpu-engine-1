@@ -2,7 +2,7 @@
 
 struct VEC3_CMP
 {
-	bool operator()(const DirectX::XMFLOAT3& a, const DirectX::XMFLOAT3& b) const
+	bool operator()(const XMFLOAT3& a, const XMFLOAT3& b) const
 	{
 		const float eps = 0.001f;
 		if ( fabs(a.x-b.x)>eps )
@@ -19,9 +19,9 @@ struct VEC3_CMP
 
 struct VERTEX
 {
-	DirectX::XMFLOAT3 pos;
-	DirectX::XMFLOAT3 color;
-	DirectX::XMFLOAT3 normal;
+	XMFLOAT3 pos;
+	XMFLOAT3 color;
+	XMFLOAT3 normal;
 
 	VERTEX();
 	void Identity();
@@ -45,8 +45,8 @@ struct TRIANGLE
 
 struct RECTANGLE
 {
-	DirectX::XMFLOAT2 min;
-	DirectX::XMFLOAT2 max;
+	XMFLOAT2 min;
+	XMFLOAT2 max;
 
 	RECTANGLE();
 	void Zero();
@@ -58,13 +58,13 @@ struct RECTANGLE
 
 struct AABB
 {
-	DirectX::XMFLOAT3 min;
-	DirectX::XMFLOAT3 max;
+	XMFLOAT3 min;
+	XMFLOAT3 max;
 
 	AABB();
 	AABB& operator=(const OBB& obb);
 	void Zero();
-	bool XM_CALLCONV ToScreen(RECTANGLE& out, DirectX::FXMMATRIX wvp, float renderWidth, float renderHeight);
+	bool XM_CALLCONV ToScreen(RECTANGLE& out, FXMMATRIX wvp, float renderWidth, float renderHeight);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -73,12 +73,12 @@ struct AABB
 
 struct OBB
 {
-	DirectX::XMFLOAT3 pts[8];
+	XMFLOAT3 pts[8];
 
 	OBB();
 	OBB& operator=(const AABB& aabb);
 	void Zero();
-	void XM_CALLCONV Transform(DirectX::FXMMATRIX m);
+	void XM_CALLCONV Transform(FXMMATRIX m);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,8 +87,8 @@ struct OBB
 
 struct RAY
 {
-	DirectX::XMFLOAT3 pos;
-	DirectX::XMFLOAT3 dir;
+	XMFLOAT3 pos;
+	XMFLOAT3 dir;
 
 	RAY();
 	void Identity();
@@ -105,8 +105,8 @@ struct MESH
 
 	MESH();
 	void Clear();
-	void AddTriangle(DirectX::XMFLOAT3& a, DirectX::XMFLOAT3& b, DirectX::XMFLOAT3& c, DirectX::XMFLOAT3& color);
-	void AddFace(DirectX::XMFLOAT3& a, DirectX::XMFLOAT3& b, DirectX::XMFLOAT3& c, DirectX::XMFLOAT3& d, DirectX::XMFLOAT3& color);
+	void AddTriangle(XMFLOAT3& a, XMFLOAT3& b, XMFLOAT3& c, XMFLOAT3& color);
+	void AddFace(XMFLOAT3& a, XMFLOAT3& b, XMFLOAT3& c, XMFLOAT3& d, XMFLOAT3& color);
 	void Optimize();
 	void CalculateNormals();
 	void CalculateBox();

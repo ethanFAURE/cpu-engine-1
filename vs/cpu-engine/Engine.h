@@ -19,12 +19,13 @@ public:
 	ENTITY* CreateEntity();
 	void ReleaseEntity(ENTITY* pEntity);
 
-	void GetCursor(DirectX::XMFLOAT2& pt);
-	RAY ToRay(DirectX::XMFLOAT2& pt);
+	void GetCursor(XMFLOAT2& pt);
+	RAY GetCameraRay(XMFLOAT2& pt);
+	CAMERA* GetCamera();
 
-	static DirectX::XMFLOAT3 ApplyLighting(DirectX::XMFLOAT3& color, float intensity);
-	static ui32 ToBGR(DirectX::XMFLOAT3& color);
-	static DirectX::XMFLOAT3 ToColor(int r, int g, int b);
+	static XMFLOAT3 ApplyLighting(XMFLOAT3& color, float intensity);
+	static ui32 ToBGR(XMFLOAT3& color);
+	static XMFLOAT3 ToColor(int r, int g, int b);
 	static float Clamp(float v);
 	static float Clamp(float v, float min, float max);
 	static int Clamp(int v, int min, int max);
@@ -39,18 +40,17 @@ protected:
 	void Update_Physics();
 	void Update_Purge();
 	void Render();
-	void Render_View();
 	void Render_Sort();
 	void Render_Box();
 	void Render_Tile();
 	void Render_Entity(int iTile);
 
-	void Clear(DirectX::XMFLOAT3& color);
+	void Clear(XMFLOAT3& color);
 	void DrawSky();
-	void Present();
-	void DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, DirectX::XMFLOAT3& color);
-	void FillTriangle(DirectX::XMFLOAT3& v1, DirectX::XMFLOAT3& v2, DirectX::XMFLOAT3& v3, DirectX::XMFLOAT3& c1, DirectX::XMFLOAT3& c2, DirectX::XMFLOAT3& c3, TILE& tile);
 	void Draw(ENTITY* pEntity, TILE& tile);
+	void Present();
+	void DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOAT3& color);
+	void FillTriangle(XMFLOAT3* tri, XMFLOAT3* colors, TILE& tile);
 
 	virtual void OnStart() {}
 	virtual void OnUpdate() {}
@@ -108,12 +108,12 @@ protected:
 
 	// Color
 	bool m_sky;
-	DirectX::XMFLOAT3 m_clearColor;
-	DirectX::XMFLOAT3 m_groundColor;
-	DirectX::XMFLOAT3 m_skyColor;
+	XMFLOAT3 m_clearColor;
+	XMFLOAT3 m_groundColor;
+	XMFLOAT3 m_skyColor;
 
 	// Light
-	DirectX::XMFLOAT3 m_lightDir;
+	XMFLOAT3 m_lightDir;
 	float m_ambientLight;
 	
 	// Time
@@ -125,10 +125,7 @@ protected:
 	int m_fps;
 
 	// Camera
-	DirectX::XMFLOAT4X4 m_matProj;
-	DirectX::XMFLOAT4X4 m_matView;
-	DirectX::XMFLOAT4X4 m_matViewProj;
-	TRANSFORM m_camera;
+	CAMERA m_camera;
 
 	// Entity
 	std::vector<ENTITY*> m_entities;

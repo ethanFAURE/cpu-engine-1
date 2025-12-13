@@ -92,7 +92,7 @@ void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight)
 
 	// Light
 	m_lightDir = { 0.5f, -1.0f, 0.5f };
-	XMStoreFloat3(&m_lightDir, DirectX::XMVector3Normalize(XMLoadFloat3(&m_lightDir)));
+	XMStoreFloat3(&m_lightDir, XMVector3Normalize(XMLoadFloat3(&m_lightDir)));
 	m_ambientLight = 0.2f;
 
 	// Entity
@@ -255,7 +255,7 @@ void Engine::FixWindow()
 void Engine::FixProjection()
 {
 	const float ratio = float(m_windowWidth) / float(m_windowHeight);
-	XMStoreFloat4x4(&m_matProj, DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV4, ratio, 0.1f, 100.0f));
+	m_camera.UpdateProjection(ratio);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -290,7 +290,7 @@ void Engine::ReleaseEntity(ENTITY* pEntity)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Engine::GetCursor(DirectX::XMFLOAT2& pos)
+void Engine::GetCursor(XMFLOAT2& pos)
 {
 	POINT pt;
 	GetCursorPos(&pt);
@@ -301,63 +301,46 @@ void Engine::GetCursor(DirectX::XMFLOAT2& pos)
 	pos.y = pos.y*m_renderHeight/m_windowHeight;
 }
 
-//RAY Engine::ToRay(DirectX::XMFLOAT2& pt)
-//{
-//	const float xNdc = (2.0f * pt.x) / m_renderWidth - 1.0f;
-//	const float yNdc = 1.0f - (2.0f * pt.y) / m_renderHeight;
-//
-//	const DirectX::XMVECTOR nearClip = DirectX::XMVectorSet(xNdc, yNdc, 0.0f, 1.0f);
-//	const DirectX::XMVECTOR farClip  = DirectX::XMVectorSet(xNdc, yNdc, 1.0f, 1.0f);
-//
-//	const DirectX::XMMATRIX invViewProj = DirectX::XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_matViewProj));
-//
-//	DirectX::XMVECTOR nearWorld = DirectX::XMVector4Transform(nearClip, invViewProj);
-//	DirectX::XMVECTOR farWorld = DirectX::XMVector4Transform(farClip, invViewProj);
-//	nearWorld = DirectX::XMVectorScale(nearWorld, 1.0f / DirectX::XMVectorGetW(nearWorld));
-//	farWorld = DirectX::XMVectorScale(farWorld, 1.0f / DirectX::XMVectorGetW(farWorld));
-//
-//	RAY ray;
-//	ray.pos = m_camera.pos;
-//	const DirectX::XMVECTOR dir = DirectX::XMVectorSubtract(farWorld, XMLoadFloat3(&m_camera.pos));
-//	XMStoreFloat3(&ray.dir, DirectX::XMVector3Normalize(dir));
-//	return ray;
-//}
-
-RAY Engine::ToRay(DirectX::XMFLOAT2& pt)
+RAY Engine::GetCameraRay(XMFLOAT2& pt)
 {
 	float px = pt.x*2.0f/m_renderWidth - 1.0f;
 	float py = pt.y*2.0f/m_renderHeight - 1.0f;
 
-	float x = px/m_matProj._11;
-	float y = -py/m_matProj._22;
+	float x = px/m_camera.matProj._11;
+	float y = -py/m_camera.matProj._22;
 	float z = 1.0f;
 
 	RAY ray;
-	ray.pos.x = m_camera.world._41;
-	ray.pos.y = m_camera.world._42;
-	ray.pos.z = m_camera.world._43;
-	ray.dir.x = x*m_camera.world._11 + y*m_camera.world._21 + z*m_camera.world._31;
-	ray.dir.y = x*m_camera.world._12 + y*m_camera.world._22 + z*m_camera.world._32;
-	ray.dir.z = x*m_camera.world._13 + y*m_camera.world._23 + z*m_camera.world._33;
-	XMStoreFloat3(&ray.dir, DirectX::XMVector3Normalize(XMLoadFloat3(&ray.dir)));
+	ray.pos.x = m_camera.transform.world._41;
+	ray.pos.y = m_camera.transform.world._42;
+	ray.pos.z = m_camera.transform.world._43;
+	ray.dir.x = x*m_camera.transform.world._11 + y*m_camera.transform.world._21 + z*m_camera.transform.world._31;
+	ray.dir.y = x*m_camera.transform.world._12 + y*m_camera.transform.world._22 + z*m_camera.transform.world._32;
+	ray.dir.z = x*m_camera.transform.world._13 + y*m_camera.transform.world._23 + z*m_camera.transform.world._33;
+	XMStoreFloat3(&ray.dir, XMVector3Normalize(XMLoadFloat3(&ray.dir)));
 	return ray;
+}
+
+CAMERA* Engine::GetCamera()
+{
+	return &m_camera;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-DirectX::XMFLOAT3 Engine::ApplyLighting(DirectX::XMFLOAT3& color, float intensity)
+XMFLOAT3 Engine::ApplyLighting(XMFLOAT3& color, float intensity)
 {
 	intensity = Clamp(intensity);
-	DirectX::XMFLOAT3 trg;
+	XMFLOAT3 trg;
 	trg.x = color.x * intensity;
 	trg.y = color.y * intensity;
 	trg.z = color.z * intensity;
 	return trg;
 }
 
-ui32 Engine::ToBGR(DirectX::XMFLOAT3& color)
+ui32 Engine::ToBGR(XMFLOAT3& color)
 {
 	float r = std::max(0.0f, std::min(1.0f, color.x));
 	float g = std::max(0.0f, std::min(1.0f, color.y));
@@ -365,9 +348,9 @@ ui32 Engine::ToBGR(DirectX::XMFLOAT3& color)
 	return RGB((int)(b * 255.0f), (int)(g * 255.0f), (int)(r * 255.0f));
 }
 
-DirectX::XMFLOAT3 Engine::ToColor(int r, int g, int b)
+XMFLOAT3 Engine::ToColor(int r, int g, int b)
 {
-	DirectX::XMFLOAT3 color;
+	XMFLOAT3 color;
 	color.x = r/255.0f;
 	color.y = g/255.0f;
 	color.z = b/255.0f;
@@ -408,18 +391,18 @@ int Engine::Clamp(int v, int min, int max)
 void Engine::CreateSpaceship(MESH& mesh)
 {
 	const float width = 2.0f;
-	DirectX::XMFLOAT3 nose = { 0.0f, 0.0f, 1.5f };
-	DirectX::XMFLOAT3 rTop = { 0.0f, 0.5f, -1.0f };
-	DirectX::XMFLOAT3 rBot = { 0.0f, -0.3f, -1.0f };
-	DirectX::XMFLOAT3 wLeft = { -width*0.5f, 0.0f, -1.0f };
-	DirectX::XMFLOAT3 wRight = { width*0.5f, 0.0f, -1.0f };
+	XMFLOAT3 nose = { 0.0f, 0.0f, 1.5f };
+	XMFLOAT3 rTop = { 0.0f, 0.5f, -1.0f };
+	XMFLOAT3 rBot = { 0.0f, -0.3f, -1.0f };
+	XMFLOAT3 wLeft = { -width*0.5f, 0.0f, -1.0f };
+	XMFLOAT3 wRight = { width*0.5f, 0.0f, -1.0f };
 
-	DirectX::XMFLOAT3 c1 = ToColor(208, 208, 208);
-	DirectX::XMFLOAT3 c2 = ToColor(192, 192, 192);
-	DirectX::XMFLOAT3 c3 = ToColor(112, 112, 112);
-	DirectX::XMFLOAT3 c4 = ToColor(96, 96, 96);
-	DirectX::XMFLOAT3 c5 = ToColor(255, 255, 255);
-	DirectX::XMFLOAT3 c6 = ToColor(255, 255, 255);
+	XMFLOAT3 c1 = ToColor(208, 208, 208);
+	XMFLOAT3 c2 = ToColor(192, 192, 192);
+	XMFLOAT3 c3 = ToColor(112, 112, 112);
+	XMFLOAT3 c4 = ToColor(96, 96, 96);
+	XMFLOAT3 c5 = ToColor(255, 255, 255);
+	XMFLOAT3 c6 = ToColor(255, 255, 255);
 
 	mesh.AddTriangle(nose, rTop, wLeft, c1);				// Avant Gauche haut
 	mesh.AddTriangle(nose, wRight, rTop, c2);				// Avant Droit haut
@@ -433,16 +416,16 @@ void Engine::CreateSpaceship(MESH& mesh)
 void Engine::CreateCube(MESH& mesh)
 {
 	const float s = 0.5f; 
-	DirectX::XMFLOAT3 p0 = { -s, -s, -s };					// Avant Bas Gauche
-	DirectX::XMFLOAT3 p1 = {  s, -s, -s };					// Avant Bas Droite
-	DirectX::XMFLOAT3 p2 = {  s,  s, -s };					// Avant Haut Droite
-	DirectX::XMFLOAT3 p3 = { -s,  s, -s };					// Avant Haut Gauche
-	DirectX::XMFLOAT3 p4 = { -s, -s,  s };					// Arrière Bas Gauche
-	DirectX::XMFLOAT3 p5 = {  s, -s,  s };					// Arrière Bas Droite
-	DirectX::XMFLOAT3 p6 = {  s,  s,  s };					// Arrière Haut Droite
-	DirectX::XMFLOAT3 p7 = { -s,  s,  s };					// Arrière Haut Gauche
+	XMFLOAT3 p0 = { -s, -s, -s };					// Avant Bas Gauche
+	XMFLOAT3 p1 = {  s, -s, -s };					// Avant Bas Droite
+	XMFLOAT3 p2 = {  s,  s, -s };					// Avant Haut Droite
+	XMFLOAT3 p3 = { -s,  s, -s };					// Avant Haut Gauche
+	XMFLOAT3 p4 = { -s, -s,  s };					// Arrière Bas Gauche
+	XMFLOAT3 p5 = {  s, -s,  s };					// Arrière Bas Droite
+	XMFLOAT3 p6 = {  s,  s,  s };					// Arrière Haut Droite
+	XMFLOAT3 p7 = { -s,  s,  s };					// Arrière Haut Gauche
 	
-	DirectX::XMFLOAT3 c1 = ToColor(255, 255, 255);
+	XMFLOAT3 c1 = ToColor(255, 255, 255);
 	mesh.AddFace(p0, p1, p2, p3, c1);						// Face Avant (Z = -0.5)
 	mesh.AddFace(p5, p4, p7, p6, c1);						// Face Arrière (Z = +0.5)
 	mesh.AddFace(p1, p5, p6, p2, c1);						// Face Droite (X = +0.5)
@@ -457,10 +440,10 @@ void Engine::CreateCircle(MESH& mesh, float radius, int count)
 	if ( count<3 )
 		return;
 
-	DirectX::XMFLOAT3 c1 = ToColor(255, 255, 255);
-	float step = DirectX::XM_2PI / count;
+	XMFLOAT3 c1 = ToColor(255, 255, 255);
+	float step = XM_2PI / count;
 	float angle = 0.0f;
-	DirectX::XMFLOAT3 p1, p2, p3;
+	XMFLOAT3 p1, p2, p3;
 	p1.x = 0.0f;
 	p1.y = 0.0f;
 	p1.z = 0.0f;
@@ -597,7 +580,7 @@ void Engine::Update_Purge()
 void Engine::Render()
 {
 	// Prepare
-	Render_View();
+	m_camera.Update();
 	Render_Sort();
 	Render_Box();
 	Render_Tile();
@@ -624,15 +607,6 @@ void Engine::Render()
 	Present();
 }
 
-void Engine::Render_View()
-{
-	m_camera.UpdateWorld();
-	DirectX::XMMATRIX mat = DirectX::XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_camera.world));
-	XMStoreFloat4x4(&m_matView, mat);
-	mat *= XMLoadFloat4x4(&m_matProj);
-	XMStoreFloat4x4(&m_matViewProj, mat);
-}
-
 void Engine::Render_Sort()
 {
 	std::sort(m_sortedEntities.begin(), m_sortedEntities.begin()+m_entityCount, [](const ENTITY* pA, const ENTITY* pB) { return pA->view.z < pB->view.z; });
@@ -652,8 +626,8 @@ void Engine::Render_Box()
 			continue;
 
 		// World
-		pEntity->transform.UpdateWorld();
-		DirectX::XMMATRIX matWorld = DirectX::XMLoadFloat4x4(&pEntity->transform.world);
+		pEntity->transform.Update();
+		XMMATRIX matWorld = XMLoadFloat4x4(&pEntity->transform.world);
 
 		// OBB
 		pEntity->obb = pEntity->pMesh->aabb;
@@ -663,14 +637,14 @@ void Engine::Render_Box()
 		pEntity->aabb = pEntity->obb;
 
 		// Rectangle (screen)
-		DirectX::XMMATRIX matWVP = matWorld;
-		matWVP *= DirectX::XMLoadFloat4x4(&m_matViewProj);
+		XMMATRIX matWVP = matWorld;
+		matWVP *= XMLoadFloat4x4(&m_camera.matViewProj);
 		pEntity->pMesh->aabb.ToScreen(pEntity->box, matWVP, width, height);
 
 		// View
-		DirectX::XMMATRIX matView = DirectX::XMLoadFloat4x4(&m_matView);
-		DirectX::XMVECTOR pos = XMLoadFloat3(&pEntity->transform.pos);
-		pos = DirectX::XMVector3TransformCoord(pos, matView);
+		XMMATRIX matView = XMLoadFloat4x4(&m_camera.matView);
+		XMVECTOR pos = XMLoadFloat3(&pEntity->transform.pos);
+		pos = XMVector3TransformCoord(pos, matView);
 		XMStoreFloat3(&pEntity->view, pos);
 	}
 }
@@ -753,7 +727,7 @@ void Engine::Present()
 #endif
 }
 
-void Engine::Clear(DirectX::XMFLOAT3& color)
+void Engine::Clear(XMFLOAT3& color)
 {
 	ui32 bgr = ToBGR(color);
 	std::fill(m_colorBuffer.begin(), m_colorBuffer.end(), bgr);
@@ -765,16 +739,16 @@ void Engine::DrawSky()
 	ui32 gCol = ToBGR(m_groundColor);
 	ui32 sCol = ToBGR(m_skyColor);
 
-	DirectX::XMMATRIX matView = XMLoadFloat4x4(&m_matView);
-	DirectX::XMVECTOR worldUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	DirectX::XMVECTOR viewUp = DirectX::XMVector3TransformNormal(worldUp, matView);
+	XMMATRIX matView = XMLoadFloat4x4(&m_camera.matView);
+	XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMVECTOR viewUp = XMVector3TransformNormal(worldUp, matView);
 
-	float nx = DirectX::XMVectorGetX(viewUp);
-	float ny = DirectX::XMVectorGetY(viewUp);
-	float nz = DirectX::XMVectorGetZ(viewUp);
+	float nx = XMVectorGetX(viewUp);
+	float ny = XMVectorGetY(viewUp);
+	float nz = XMVectorGetZ(viewUp);
 
-	float p11 = m_matProj._11; // Cotan(FovX/2) / Aspect
-	float p22 = m_matProj._22; // Cotan(FovY/2)
+	float p11 = m_camera.matProj._11; // Cotan(FovX/2) / Aspect
+	float p22 = m_camera.matProj._22; // Cotan(FovY/2)
 
 	float a = nx / (p11 * m_renderWidthHalf);
 	float b = -ny / (p22 * m_renderHeightHalf); // Le signe '-' compense l'axe Y inversé de l'écran
@@ -818,7 +792,88 @@ void Engine::DrawSky()
 	}
 }
 
-void Engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, DirectX::XMFLOAT3& color)
+void Engine::Draw(ENTITY* pEntity, TILE& tile)
+{
+	if ( pEntity==nullptr || pEntity->pMesh==nullptr )
+		return;
+
+	XMMATRIX matWorld = XMLoadFloat4x4(&pEntity->transform.world);
+	XMMATRIX matView = XMLoadFloat4x4(&m_camera.matView);
+	XMMATRIX matViewProj = XMLoadFloat4x4(&m_camera.matViewProj);
+	XMVECTOR lightDir = XMLoadFloat3(&m_lightDir);
+
+	for ( const TRIANGLE& t : pEntity->pMesh->triangles )
+	{
+		// World space
+		XMVECTOR vWorld[3];
+		for ( int i=0 ; i<3 ; i++ )
+		{
+			XMVECTOR loc = XMLoadFloat3(&t.v[i].pos);
+			loc = XMVectorSetW(loc, 1.0f);
+			vWorld[i] = XMVector3Transform(loc, matWorld);
+		}
+
+		//XMVECTOR camPos = XMLoadFloat3(&m_cam.pos);
+		//XMVECTOR e0 = XMVectorSubtract(vWorld[1], vWorld[0]);
+		//XMVECTOR e1 = XMVectorSubtract(vWorld[2], vWorld[0]);
+		//XMVECTOR faceNormal = XMVector3Normalize(XMVector3Cross(e0, e1));
+		//XMVECTOR toCam = XMVector3Normalize(XMVectorSubtract(camPos, vWorld[0]));
+		//float ndotv = XMVectorGetX(XMVector3Dot(faceNormal, toCam));
+		//if ( ndotv<=0.001f )
+		//	continue;
+
+		// Screen space
+		XMFLOAT3 vScreen[3];
+		bool safe = true;
+		for ( int i=0 ; i<3 ; i++ )
+		{
+			XMVECTOR clip = XMVector3Transform(vWorld[i], matViewProj);
+			XMFLOAT4 out;
+			XMStoreFloat4(&out, clip);
+			if ( out.w<=0.0f )
+			{
+				safe = false;
+				break;
+			}
+			float invW = 1.0f / out.w;
+			float ndcX = out.x * invW;   // [-1,1]
+			float ndcY = out.y * invW;   // [-1,1]
+			float ndcZ = out.z * invW;   // [0,1] avec XMMatrixPerspectiveFovLH
+			ndcZ = Clamp(ndcZ);
+			vScreen[i].x = (ndcX + 1.0f) * m_renderWidthHalf;
+			vScreen[i].y = (1.0f - ndcY) * m_renderHeightHalf;
+			vScreen[i].z = ndcZ;         // profondeur normalisée 0..1
+		}
+		if ( safe==false )
+			continue;
+
+		// Culling
+		float area = (vScreen[2].x - vScreen[0].x) * (vScreen[1].y - vScreen[0].y) - (vScreen[2].y - vScreen[0].y) * (vScreen[1].x - vScreen[0].x);
+		if ( area<=0.0f )
+			continue;
+
+		// Color
+		XMFLOAT3 vertColors[3];
+		for ( int i=0 ; i<3 ; i++ )
+		{
+			XMVECTOR localNormal = XMLoadFloat3(&t.v[i].normal);
+			XMVECTOR worldNormal = XMVector3TransformNormal(localNormal, matWorld);
+			worldNormal = XMVector3Normalize(worldNormal);
+			float dot = XMVectorGetX(XMVector3Dot(worldNormal, XMVectorNegate(lightDir)));
+			float intensity = std::max(0.0f, dot) + m_ambientLight;
+			XMFLOAT3 finalColor;
+			finalColor.x = t.v[i].color.x * pEntity->material.x * intensity;
+			finalColor.y = t.v[i].color.y * pEntity->material.y * intensity;
+			finalColor.z = t.v[i].color.z * pEntity->material.z * intensity;
+			vertColors[i] = finalColor;
+		}
+
+		// Draw
+		FillTriangle(vScreen, vertColors, tile);
+	}
+}
+
+void Engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOAT3& color)
 {
 	ui32 bgr = ToBGR(color);
 
@@ -866,11 +921,11 @@ void Engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, Direct
 	}
 }
 
-void Engine::FillTriangle(DirectX::XMFLOAT3& v1, DirectX::XMFLOAT3& v2, DirectX::XMFLOAT3& v3, DirectX::XMFLOAT3& c1, DirectX::XMFLOAT3& c2, DirectX::XMFLOAT3& c3, TILE& tile)
+void Engine::FillTriangle(XMFLOAT3* tri, XMFLOAT3* colors, TILE& tile)
 {
-	const float x1 = v1.x, y1 = v1.y, z1 = v1.z;
-	const float x2 = v2.x, y2 = v2.y, z2 = v2.z;
-	const float x3 = v3.x, y3 = v3.y, z3 = v3.z;
+	const float x1 = tri[0].x, y1 = tri[0].y, z1 = tri[0].z;
+	const float x2 = tri[1].x, y2 = tri[1].y, z2 = tri[1].z;
+	const float x3 = tri[2].x, y3 = tri[2].y, z3 = tri[2].z;
 
 	int minX = (int)floor(std::min(std::min(x1, x2), x3));
 	int maxX = (int)ceil(std::max(std::max(x1, x2), x3));
@@ -967,9 +1022,9 @@ void Engine::FillTriangle(DirectX::XMFLOAT3& v1, DirectX::XMFLOAT3& v2, DirectX:
 			}
 			m_depthBuffer[index] = z;
 
-			float r = Clamp(c1.x * w1 + c2.x * w2 + c3.x * w3);
-			float g = Clamp(c1.y * w1 + c2.y * w2 + c3.y * w3);
-			float b = Clamp(c1.z * w1 + c2.z * w2 + c3.z * w3);
+			float r = Clamp(colors[0].x * w1 + colors[1].x * w2 + colors[2].x * w3);
+			float g = Clamp(colors[0].y * w1 + colors[1].y * w2 + colors[2].y * w3);
+			float b = Clamp(colors[0].z * w1 + colors[1].z * w2 + colors[2].z * w3);
 			m_colorBuffer[index] = RGB((int)(b*255.0f), (int)(g*255.0f), (int)(r*255.0f));
 
 			e12 += dE12dx;
@@ -980,87 +1035,6 @@ void Engine::FillTriangle(DirectX::XMFLOAT3& v1, DirectX::XMFLOAT3& v2, DirectX:
 		e12_row += dE12dy;
 		e23_row += dE23dy;
 		e31_row += dE31dy;
-	}
-}
-
-void Engine::Draw(ENTITY* pEntity, TILE& tile)
-{
-	if ( pEntity==nullptr || pEntity->pMesh==nullptr )
-		return;
-
-	DirectX::XMMATRIX matWorld = DirectX::XMLoadFloat4x4(&pEntity->transform.world);
-	DirectX::XMMATRIX matView = DirectX::XMLoadFloat4x4(&m_matView);
-	DirectX::XMMATRIX matViewProj = DirectX::XMLoadFloat4x4(&m_matViewProj);
-	DirectX::XMVECTOR lightDir = DirectX::XMLoadFloat3(&m_lightDir);
-
-	for ( const TRIANGLE& t : pEntity->pMesh->triangles )
-	{
-		// World space
-		DirectX::XMVECTOR vWorld[3];
-		for ( int i=0 ; i<3 ; i++ )
-		{
-			DirectX::XMVECTOR loc = DirectX::XMLoadFloat3(&t.v[i].pos);
-			loc = DirectX::XMVectorSetW(loc, 1.0f);
-			vWorld[i] = DirectX::XMVector3Transform(loc, matWorld);
-		}
-
-		//DirectX::XMVECTOR camPos = DirectX::XMLoadFloat3(&m_cam.pos);
-		//DirectX::XMVECTOR e0 = DirectX::XMVectorSubtract(vWorld[1], vWorld[0]);
-		//DirectX::XMVECTOR e1 = DirectX::XMVectorSubtract(vWorld[2], vWorld[0]);
-		//DirectX::XMVECTOR faceNormal = DirectX::XMVector3Normalize(DirectX::XMVector3Cross(e0, e1));
-		//DirectX::XMVECTOR toCam = DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(camPos, vWorld[0]));
-		//float ndotv = DirectX::XMVectorGetX(DirectX::XMVector3Dot(faceNormal, toCam));
-		//if ( ndotv<=0.001f )
-		//	continue;
-
-		// Screen space
-		DirectX::XMFLOAT3 vScreen[3];
-		bool safe = true;
-		for ( int i=0 ; i<3 ; i++ )
-		{
-			DirectX::XMVECTOR clip = DirectX::XMVector3Transform(vWorld[i], matViewProj);
-			DirectX::XMFLOAT4 out;
-			DirectX::XMStoreFloat4(&out, clip);
-			if ( out.w<=0.0f )
-			{
-				safe = false;
-				break;
-			}
-			float invW = 1.0f / out.w;
-			float ndcX = out.x * invW;   // [-1,1]
-			float ndcY = out.y * invW;   // [-1,1]
-			float ndcZ = out.z * invW;   // [0,1] avec XMMatrixPerspectiveFovLH
-			ndcZ = Clamp(ndcZ);
-			vScreen[i].x = (ndcX + 1.0f) * m_renderWidthHalf;
-			vScreen[i].y = (1.0f - ndcY) * m_renderHeightHalf;
-			vScreen[i].z = ndcZ;         // profondeur normalisée 0..1
-		}
-		if ( safe==false )
-			continue;
-
-		// Culling
-		float area = (vScreen[2].x - vScreen[0].x) * (vScreen[1].y - vScreen[0].y) - (vScreen[2].y - vScreen[0].y) * (vScreen[1].x - vScreen[0].x);
-		if ( area<=0.0f )
-			continue;
-
-		// Color
-		DirectX::XMFLOAT3 vertColors[3];
-		for ( int i=0 ; i<3 ; i++ )
-		{
-			DirectX::XMVECTOR localNormal = DirectX::XMLoadFloat3(&t.v[i].normal);
-			DirectX::XMVECTOR worldNormal = DirectX::XMVector3TransformNormal(localNormal, matWorld);
-			worldNormal = DirectX::XMVector3Normalize(worldNormal);
-			float dot = DirectX::XMVectorGetX(DirectX::XMVector3Dot(worldNormal, DirectX::XMVectorNegate(lightDir)));
-			float intensity = std::max(0.0f, dot) + m_ambientLight;
-			DirectX::XMFLOAT3 finalColor;
-			finalColor.x = t.v[i].color.x * pEntity->material.x * intensity;
-			finalColor.y = t.v[i].color.y * pEntity->material.y * intensity;
-			finalColor.z = t.v[i].color.z * pEntity->material.z * intensity;
-			vertColors[i] = finalColor;
-		}
-
-		// Draw
-		FillTriangle(vScreen[0], vScreen[1], vScreen[2], vertColors[0], vertColors[1], vertColors[2], tile);
 	}
 }
 
