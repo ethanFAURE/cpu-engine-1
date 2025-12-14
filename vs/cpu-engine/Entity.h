@@ -91,3 +91,108 @@ struct CAMERA
 	void UpdateProjection(float aspectRatio);
 	void Update();
 };
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+struct MANAGER
+{
+	std::vector<T*> list;
+	std::vector<T*> sortedList;
+	int count;
+	std::vector<T*> bornList;
+	int bornCount;
+	std::vector<T*> deadList;
+	int deadCount;
+
+	MANAGER()
+	{
+		Clear();
+	}
+	void Clear()
+	{
+		list.clear();
+		sortedList.clear();
+		count = 0;
+		bornList.clear();
+		bornCount = 0;
+		deadList.clear();
+		deadCount = 0;
+	}
+	T* operator[](int index) { return list[index]; }
+	T* Create()
+	{
+		T* p = new T;
+		if ( bornCount<bornList.size() )
+			bornList[bornCount] = p;
+		else
+			bornList.push_back(p);
+		bornCount++;
+		return p;
+	}
+	void Release(T* p)
+	{
+		if ( p==nullptr || p->dead )
+			return;
+		p->dead = true;
+		if ( deadCount<deadList.size() )
+			deadList[deadCount] = p;
+		else
+			deadList.push_back(p);
+		deadCount++;
+	}
+	void Purge()
+	{
+		// Dead
+		for ( int i=0 ; i<deadCount ; i++ )
+		{
+			T* p = deadList[i];
+			if ( p->index==-1 )
+			{
+				delete deadList[i];
+				deadList[i] = nullptr;
+				continue;
+			}
+			if ( p->index<count-1 )
+			{
+				list[p->index] = list[count-1];
+				list[p->index]->index = p->index;
+			}
+			if ( p->sortedIndex<count-1 )
+			{
+				sortedList[p->sortedIndex] = sortedList[count-1];
+				sortedList[p->sortedIndex]->sortedIndex = p->sortedIndex;
+			}
+			delete deadList[i];
+			deadList[i] = nullptr;
+			count--;
+		}
+		deadCount = 0;
+
+		// Born
+		for ( int i=0 ; i<bornCount ; i++ )
+		{
+			T* p = bornList[i];
+			if ( p->dead )
+			{
+				delete bornList[i];
+				bornList[i] = nullptr;
+				continue;
+			}
+			p->index = count;
+			p->sortedIndex = p->index;
+			if ( p->index<list.size() )
+				list[p->index] = p;
+			else
+				list.push_back(p);
+			if ( p->sortedIndex<sortedList.size() )
+				sortedList[p->sortedIndex] = p;
+			else
+				sortedList.push_back(p);
+			count++;
+		}
+		bornCount = 0;
+	}
+};

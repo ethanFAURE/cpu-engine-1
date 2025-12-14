@@ -12,7 +12,7 @@ public:
 	void OnPreRender() override;
 	void OnPostRender() override;
 
-	static void MyPixelShader(PS_DATA& data);
+	static void MyPixelShader(PS_IO& io);
 
 private:
 

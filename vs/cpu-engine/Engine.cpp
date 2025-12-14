@@ -91,10 +91,10 @@ void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, 
 	m_ambient = 0.2f;
 
 	// Entity
-	m_entityCount = 0;
-	m_bornEntityCount = 0;
-	m_deadEntityCount = 0;
-
+	m_entities.Clear();
+	m_sprites.Clear();
+	m_particleEmitters.Clear();
+	
 	// Tile
 #ifdef CONFIG_MT
 	m_threadCount = std::max(1u, std::thread::hardware_concurrency());
@@ -277,50 +277,32 @@ void Engine::FixDevice()
 
 ENTITY* Engine::CreateEntity()
 {
-	ENTITY* pEntity = new ENTITY;
-	if ( m_bornEntityCount<m_bornEntities.size() )
-		m_bornEntities[m_bornEntityCount] = pEntity;
-	else
-		m_bornEntities.push_back(pEntity);
-	m_bornEntityCount++;
-	return pEntity;
+	return m_entities.Create();
 }
 
 SPRITE* Engine::CreateSprite()
 {
-	SPRITE* pSprite = new SPRITE;
-	if ( m_bornSpriteCount<m_bornSprites.size() )
-		m_bornSprites[m_bornSpriteCount] = pSprite;
-	else
-		m_bornSprites.push_back(pSprite);
-	m_bornSpriteCount++;
-	return pSprite;
+	return m_sprites.Create();
+}
+
+PARTICLE_EMITTER* Engine::CreateParticleEmitter()
+{
+	return m_particleEmitters.Create();
 }
 
 void Engine::ReleaseEntity(ENTITY* pEntity)
 {
-	if ( pEntity==nullptr || pEntity->dead )
-		return;
-
-	pEntity->dead = true;
-	if ( m_deadEntityCount<m_deadEntities.size() )
-		m_deadEntities[m_deadEntityCount] = pEntity;
-	else
-		m_deadEntities.push_back(pEntity);
-	m_deadEntityCount++;
+	m_entities.Release(pEntity);
 }
 
 void Engine::ReleaseSprite(SPRITE* pSprite)
 {
-	if ( pSprite==nullptr || pSprite->dead )
-		return;
+	m_sprites.Release(pSprite);
+}
 
-	pSprite->dead = true;
-	if ( m_deadSpriteCount<m_deadSprites.size() )
-		m_deadSprites[m_deadSpriteCount] = pSprite;
-	else
-		m_deadSprites.push_back(pSprite);
-	m_deadSpriteCount++;
+void Engine::ReleaseParticleEmitter(PARTICLE_EMITTER* pEmitter)
+{
+	m_particleEmitters.Release(pEmitter);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -578,7 +560,7 @@ void Engine::Update()
 
 void Engine::Update_Physics()
 {
-	for ( int i=0 ; i<m_entityCount ; i++ )
+	for ( int i=0 ; i<m_entities.count ; i++ )
 	{
 		ENTITY* pEntity = m_entities[i];
 		if ( pEntity->dead )
@@ -590,99 +572,9 @@ void Engine::Update_Physics()
 
 void Engine::Update_Purge()
 {
-	// Dead
-	for ( int i=0 ; i<m_deadEntityCount ; i++ )
-	{
-		ENTITY* pEntity = m_deadEntities[i];
-		if ( pEntity->index==-1 )
-		{
-			DELPTR(m_deadEntities[i]);
-			continue;
-		}
-		if ( pEntity->index<m_entityCount-1 )
-		{
-			m_entities[pEntity->index] = m_entities[m_entityCount-1];
-			m_entities[pEntity->index]->index = pEntity->index;
-		}
-		if ( pEntity->sortedIndex<m_entityCount-1 )
-		{
-			m_sortedEntities[pEntity->sortedIndex] = m_sortedEntities[m_entityCount-1];
-			m_sortedEntities[pEntity->sortedIndex]->sortedIndex = pEntity->sortedIndex;
-		}
-		DELPTR(m_deadEntities[i]);
-		m_entityCount--;
-	}
-	m_deadEntityCount = 0;
-
-	// Born
-	for ( int i=0 ; i<m_bornEntityCount ; i++ )
-	{
-		ENTITY* pEntity = m_bornEntities[i];
-		if ( pEntity->dead )
-		{
-			DELPTR(m_bornEntities[i]);
-			continue;
-		}
-		pEntity->index = m_entityCount;
-		pEntity->sortedIndex = pEntity->index;
-		if ( pEntity->index<m_entities.size() )
-			m_entities[pEntity->index] = pEntity;
-		else
-			m_entities.push_back(pEntity);
-		if ( pEntity->sortedIndex<m_sortedEntities.size() )
-			m_sortedEntities[pEntity->sortedIndex] = pEntity;
-		else
-			m_sortedEntities.push_back(pEntity);
-		m_entityCount++;
-	}
-	m_bornEntityCount = 0;
-
-	// Dead
-	for ( int i=0 ; i<m_deadSpriteCount ; i++ )
-	{
-		SPRITE* pSprite = m_deadSprites[i];
-		if ( pSprite->index==-1 )
-		{
-			DELPTR(m_deadSprites[i]);
-			continue;
-		}
-		if ( pSprite->index<m_spriteCount-1 )
-		{
-			m_sprites[pSprite->index] = m_sprites[m_spriteCount-1];
-			m_sprites[pSprite->index]->index = pSprite->index;
-		}
-		if ( pSprite->sortedIndex<m_spriteCount-1 )
-		{
-			m_sortedSprites[pSprite->sortedIndex] = m_sortedSprites[m_spriteCount-1];
-			m_sortedSprites[pSprite->sortedIndex]->sortedIndex = pSprite->sortedIndex;
-		}
-		DELPTR(m_deadSprites[i]);
-		m_spriteCount--;
-	}
-	m_deadSpriteCount = 0;
-
-	// Born
-	for ( int i=0 ; i<m_bornSpriteCount ; i++ )
-	{
-		SPRITE* pSprite = m_bornSprites[i];
-		if ( pSprite->dead )
-		{
-			DELPTR(m_bornSprites[i]);
-			continue;
-		}
-		pSprite->index = m_spriteCount;
-		pSprite->sortedIndex = pSprite->index;
-		if ( pSprite->index<m_sprites.size() )
-			m_sprites[pSprite->index] = pSprite;
-		else
-			m_sprites.push_back(pSprite);
-		if ( pSprite->sortedIndex<m_sortedSprites.size() )
-			m_sortedSprites[pSprite->sortedIndex] = pSprite;
-		else
-			m_sortedSprites.push_back(pSprite);
-		m_spriteCount++;
-	}
-	m_bornSpriteCount = 0;
+	m_entities.Purge();
+	m_sprites.Purge();
+	m_particleEmitters.Purge();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -740,14 +632,14 @@ void Engine::Render()
 void Engine::Render_SortZ()
 {
 	// Entities
-	std::sort(m_sortedEntities.begin(), m_sortedEntities.begin()+m_entityCount, [](const ENTITY* pA, const ENTITY* pB) { return pA->view.z < pB->view.z; });
-	for ( int i=0 ; i<m_entityCount ; i++ )
-		m_sortedEntities[i]->sortedIndex = i;
+	std::sort(m_entities.sortedList.begin(), m_entities.sortedList.begin()+m_entities.count, [](const ENTITY* pA, const ENTITY* pB) { return pA->view.z < pB->view.z; });
+	for ( int i=0 ; i<m_entities.count ; i++ )
+		m_entities.sortedList[i]->sortedIndex = i;
 
 	// Sprites
-	std::sort(m_sortedSprites.begin(), m_sortedSprites.begin()+m_spriteCount, [](const SPRITE* pA, const SPRITE* pB) { return pA->z < pB->z; });
-	for ( int i=0 ; i<m_spriteCount ; i++ )
-		m_sortedSprites[i]->sortedIndex = i;
+	std::sort(m_sprites.sortedList.begin(), m_sprites.sortedList.begin()+m_sprites.count, [](const SPRITE* pA, const SPRITE* pB) { return pA->z < pB->z; });
+	for ( int i=0 ; i<m_sprites.count ; i++ )
+		m_sprites.sortedList[i]->sortedIndex = i;
 }
 
 void Engine::Render_RecalculateMatrices()
@@ -755,7 +647,7 @@ void Engine::Render_RecalculateMatrices()
 	float width = (float)m_renderWidth;
 	float height = (float)m_renderHeight;
 
-	for ( int iEntity=0 ; iEntity<m_entityCount ; iEntity++ )
+	for ( int iEntity=0 ; iEntity<m_entities.count ; iEntity++ )
 	{
 		ENTITY* pEntity = m_entities[iEntity];
 		if ( pEntity->dead )
@@ -792,7 +684,7 @@ void Engine::Render_RecalculateMatrices()
 void Engine::Render_ApplyClipping()
 {
 	m_statsClipEntityCount = 0;
-	for ( int iEntity=0 ; iEntity<m_entityCount ; iEntity++ )
+	for ( int iEntity=0 ; iEntity<m_entities.count ; iEntity++ )
 	{
 		ENTITY* pEntity = m_entities[iEntity];
 		if ( pEntity->dead )
@@ -816,7 +708,7 @@ void Engine::Render_PrepareTiles()
 	m_nextTile = 0;
 
 	// Entities
-	for ( int iEntity=0 ; iEntity<m_entityCount ; iEntity++ )
+	for ( int iEntity=0 ; iEntity<m_entities.count ; iEntity++ )
 	{
 		ENTITY* pEntity = m_entities[iEntity];
 		if ( pEntity->dead )
@@ -842,9 +734,9 @@ void Engine::Render_PrepareTiles()
 void Engine::Render_Tile(int iTile)
 {
 	TILE& tile = m_tiles[iTile];
-	for ( int iEntity=0 ; iEntity<m_entityCount ; iEntity++ )
+	for ( int iEntity=0 ; iEntity<m_entities.count ; iEntity++ )
 	{
-		ENTITY* pEntity = m_sortedEntities[iEntity];
+		ENTITY* pEntity = m_entities.sortedList[iEntity];
 		if ( pEntity->dead || pEntity->pMesh==nullptr || pEntity->clipped )
 			continue;
 	
@@ -862,9 +754,9 @@ void Engine::Render_Tile(int iTile)
 
 void Engine::Render_UI()
 {
-	for ( int iSprite=0 ; iSprite<m_spriteCount ; iSprite++ )
+	for ( int iSprite=0 ; iSprite<m_sprites.count ; iSprite++ )
 	{
-		SPRITE* pSprite = m_sortedSprites[iSprite];
+		SPRITE* pSprite = m_sprites.sortedList[iSprite];
 		if ( pSprite->dead )
 			continue;
 
@@ -1009,7 +901,7 @@ void Engine::DrawEntity(ENTITY* pEntity, TILE& tile)
 	DRAWCALL dc;
 	bool safe;
 	XMFLOAT3 screen[3];
-	VS out[3];
+	VERTEX_OUT vo[3];
 
 	for ( const TRIANGLE& triangle : pEntity->pMesh->triangles )
 	{
@@ -1024,38 +916,38 @@ void Engine::DrawEntity(ENTITY* pEntity, TILE& tile)
 			XMVECTOR loc = XMLoadFloat3(&in.pos);
 			loc = XMVectorSetW(loc, 1.0f);
 			XMVECTOR world = XMVector4Transform(loc, matWorld);
-			XMStoreFloat3(&out[i].worldPos, world);
+			XMStoreFloat3(&vo[i].worldPos, world);
 
 			// Clip pos
 			XMVECTOR clip = XMVector4Transform(world, matViewProj);
-			XMStoreFloat4(&out[i].clipPos, clip);
-			if ( out[i].clipPos.w<=0.0f )
+			XMStoreFloat4(&vo[i].clipPos, clip);
+			if ( vo[i].clipPos.w<=0.0f )
 			{
 				safe = false;
 				break;
 			}
-			out[i].invW = 1.0f / out[i].clipPos.w;
+			vo[i].invW = 1.0f / vo[i].clipPos.w;
 
 			// World normal
 			XMVECTOR localNormal = XMLoadFloat3(&in.normal);
 			XMVECTOR worldNormal = XMVector3TransformNormal(localNormal, normalMat);
 			worldNormal = XMVector3Normalize(worldNormal);
-			XMStoreFloat3(&out[i].worldNormal, worldNormal);
+			XMStoreFloat3(&vo[i].worldNormal, worldNormal);
 
 			// Albedo
-			out[i].albedo.x = Clamp(in.color.x * material.color.x);
-			out[i].albedo.y = Clamp(in.color.y * material.color.y);
-			out[i].albedo.z = Clamp(in.color.z * material.color.z);
+			vo[i].albedo.x = Clamp(in.color.x * material.color.x);
+			vo[i].albedo.y = Clamp(in.color.y * material.color.y);
+			vo[i].albedo.z = Clamp(in.color.z * material.color.z);
 
 			// Intensity
 			float ndotl = XMVectorGetX(XMVector3Dot(worldNormal, lightDir));
 			ndotl = std::max(0.0f, ndotl);
-			out[i].intensity = ndotl + m_ambient;
+			vo[i].intensity = ndotl + m_ambient;
 
 			// Screen pos
-			float ndcX = out[i].clipPos.x * out[i].invW;			// [-1,1]
-			float ndcY = out[i].clipPos.y * out[i].invW;			// [-1,1]
-			float ndcZ = out[i].clipPos.z * out[i].invW;			// [0,1] avec XMMatrixPerspectiveFovLH
+			float ndcX = vo[i].clipPos.x * vo[i].invW;			// [-1,1]
+			float ndcY = vo[i].clipPos.y * vo[i].invW;			// [-1,1]
+			float ndcZ = vo[i].clipPos.z * vo[i].invW;			// [0,1] avec XMMatrixPerspectiveFovLH
 			screen[i].x = (ndcX + 1.0f) * m_renderWidthHalf;
 			screen[i].y = (1.0f - ndcY) * m_renderHeightHalf;
 			screen[i].z = Clamp(ndcZ);								// profondeur normalisée 0..1
@@ -1071,7 +963,7 @@ void Engine::DrawEntity(ENTITY* pEntity, TILE& tile)
 
 		// Pixel shader
 		dc.tri = screen;
-		dc.vso = out;
+		dc.vo = vo;
 		dc.pMaterial = &material;
 		dc.pTile = &tile;
 		dc.depth = pEntity->depth;
@@ -1139,7 +1031,7 @@ void Engine::FillTriangle(DRAWCALL& dc)
 	const float dE31dy = b31;
 
 	const PS_FUNC func = dc.pMaterial->ps ? dc.pMaterial->ps : &PixelShader;
-	PS_DATA data;
+	PS_IO io;
 	for ( int y=minY ; y<maxY ; ++y )
 	{
 		float e12 = e12_row;
@@ -1182,59 +1074,59 @@ void Engine::FillTriangle(DRAWCALL& dc)
 			}
 
 			// Input
-			data.in.x = x;
-			data.in.y = y;
-			data.in.depth = z;
+			io.p.x = x;
+			io.p.y = y;
+			io.p.depth = z;
 
 			// Position (lerp)
-			data.in.pos.x = dc.vso[2].worldPos.x + (dc.vso[0].worldPos.x - dc.vso[2].worldPos.x) * w1 + (dc.vso[1].worldPos.x - dc.vso[2].worldPos.x) * w2;
-			data.in.pos.y = dc.vso[2].worldPos.y + (dc.vso[0].worldPos.y - dc.vso[2].worldPos.y) * w1 + (dc.vso[1].worldPos.y - dc.vso[2].worldPos.y) * w2;
-			data.in.pos.z = dc.vso[2].worldPos.z + (dc.vso[0].worldPos.z - dc.vso[2].worldPos.z) * w1 + (dc.vso[1].worldPos.z - dc.vso[2].worldPos.z) * w2;
+			io.p.pos.x = dc.vo[2].worldPos.x + (dc.vo[0].worldPos.x - dc.vo[2].worldPos.x) * w1 + (dc.vo[1].worldPos.x - dc.vo[2].worldPos.x) * w2;
+			io.p.pos.y = dc.vo[2].worldPos.y + (dc.vo[0].worldPos.y - dc.vo[2].worldPos.y) * w1 + (dc.vo[1].worldPos.y - dc.vo[2].worldPos.y) * w2;
+			io.p.pos.z = dc.vo[2].worldPos.z + (dc.vo[0].worldPos.z - dc.vo[2].worldPos.z) * w1 + (dc.vo[1].worldPos.z - dc.vo[2].worldPos.z) * w2;
 
 			// Normal (lerp)
-			data.in.normal.x = dc.vso[2].worldNormal.x + (dc.vso[0].worldNormal.x - dc.vso[2].worldNormal.x) * w1 + (dc.vso[1].worldNormal.x - dc.vso[2].worldNormal.x) * w2;
-			data.in.normal.y = dc.vso[2].worldNormal.y + (dc.vso[0].worldNormal.y - dc.vso[2].worldNormal.y) * w1 + (dc.vso[1].worldNormal.y - dc.vso[2].worldNormal.y) * w2;
-			data.in.normal.z = dc.vso[2].worldNormal.z + (dc.vso[0].worldNormal.z - dc.vso[2].worldNormal.z) * w1 + (dc.vso[1].worldNormal.z - dc.vso[2].worldNormal.z) * w2;
+			io.p.normal.x = dc.vo[2].worldNormal.x + (dc.vo[0].worldNormal.x - dc.vo[2].worldNormal.x) * w1 + (dc.vo[1].worldNormal.x - dc.vo[2].worldNormal.x) * w2;
+			io.p.normal.y = dc.vo[2].worldNormal.y + (dc.vo[0].worldNormal.y - dc.vo[2].worldNormal.y) * w1 + (dc.vo[1].worldNormal.y - dc.vo[2].worldNormal.y) * w2;
+			io.p.normal.z = dc.vo[2].worldNormal.z + (dc.vo[0].worldNormal.z - dc.vo[2].worldNormal.z) * w1 + (dc.vo[1].worldNormal.z - dc.vo[2].worldNormal.z) * w2;
 
 			// Color (lerp)
-			data.in.albedo.x = dc.vso[2].albedo.x + (dc.vso[0].albedo.x - dc.vso[2].albedo.x) * w1 + (dc.vso[1].albedo.x - dc.vso[2].albedo.x) * w2;
-			data.in.albedo.y = dc.vso[2].albedo.y + (dc.vso[0].albedo.y - dc.vso[2].albedo.y) * w1 + (dc.vso[1].albedo.y - dc.vso[2].albedo.y) * w2;
-			data.in.albedo.z = dc.vso[2].albedo.z + (dc.vso[0].albedo.z - dc.vso[2].albedo.z) * w1 + (dc.vso[1].albedo.z - dc.vso[2].albedo.z) * w2;
+			io.p.albedo.x = dc.vo[2].albedo.x + (dc.vo[0].albedo.x - dc.vo[2].albedo.x) * w1 + (dc.vo[1].albedo.x - dc.vo[2].albedo.x) * w2;
+			io.p.albedo.y = dc.vo[2].albedo.y + (dc.vo[0].albedo.y - dc.vo[2].albedo.y) * w1 + (dc.vo[1].albedo.y - dc.vo[2].albedo.y) * w2;
+			io.p.albedo.z = dc.vo[2].albedo.z + (dc.vo[0].albedo.z - dc.vo[2].albedo.z) * w1 + (dc.vo[1].albedo.z - dc.vo[2].albedo.z) * w2;
 
 			// Lighting
 			if ( dc.pMaterial->lighting==GOURAUD )
 			{
-				float intensity = dc.vso[2].intensity + (dc.vso[0].intensity - dc.vso[2].intensity) * w1 + (dc.vso[1].intensity - dc.vso[2].intensity) * w2;
-				data.in.color.x = data.in.albedo.x * intensity;
-				data.in.color.y = data.in.albedo.y * intensity;
-				data.in.color.z = data.in.albedo.z * intensity;
+				float intensity = dc.vo[2].intensity + (dc.vo[0].intensity - dc.vo[2].intensity) * w1 + (dc.vo[1].intensity - dc.vo[2].intensity) * w2;
+				io.p.color.x = io.p.albedo.x * intensity;
+				io.p.color.y = io.p.albedo.y * intensity;
+				io.p.color.z = io.p.albedo.z * intensity;
 			}
 			else if ( dc.pMaterial->lighting==LAMBERT )
 			{
-				XMVECTOR n = XMLoadFloat3(&data.in.normal);				
+				XMVECTOR n = XMLoadFloat3(&io.p.normal);				
 				//n = XMVector3Normalize(n); // Expensive (better results)
 				XMVECTOR l = XMLoadFloat3(&Engine::Instance()->m_lightDir);
 				float ndotl = XMVectorGetX(XMVector3Dot(n, l));
 				if ( ndotl<0.0f )
 					ndotl = 0.0f;
 				float intensity = ndotl + Engine::Instance()->m_ambient;
-				data.in.color.x = data.in.albedo.x * intensity;
-				data.in.color.y = data.in.albedo.y * intensity;
-				data.in.color.z = data.in.albedo.z * intensity;
+				io.p.color.x = io.p.albedo.x * intensity;
+				io.p.color.y = io.p.albedo.y * intensity;
+				io.p.color.z = io.p.albedo.z * intensity;
 			}
 			else
-				data.in.color = data.in.albedo;
+				io.p.color = io.p.albedo;
 
 			// Output
-			data.values = dc.pMaterial->values;
-			data.out = {};
-			data.discard = false;
-			func(data);
-			if ( data.discard==false )
+			io.values = dc.pMaterial->values;
+			io.color = {};
+			io.discard = false;
+			func(io);
+			if ( io.discard==false )
 			{
 				if ( dc.depth & DEPTH_WRITE )
 					m_depthBuffer[index] = z;
-				m_colorBuffer[index] = ToBGR(data.out);
+				m_colorBuffer[index] = ToBGR(io.color);
 			}
 
 			e12 += dE12dx;
@@ -1300,9 +1192,9 @@ bool Engine::Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8
 	return true;
 }
 
-void Engine::PixelShader(PS_DATA& data)
+void Engine::PixelShader(PS_IO& io)
 {
-	data.out = data.in.color;
+	io.color = io.p.color;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

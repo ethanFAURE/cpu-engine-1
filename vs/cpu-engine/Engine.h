@@ -21,8 +21,10 @@ public:
 
 	ENTITY* CreateEntity();
 	SPRITE* CreateSprite();
+	PARTICLE_EMITTER* CreateParticleEmitter();
 	void ReleaseEntity(ENTITY* pEntity);
 	void ReleaseSprite(SPRITE* pSprite);
+	void ReleaseParticleEmitter(PARTICLE_EMITTER* pEmitter);
 
 	void GetCursor(XMFLOAT2& pt);
 	RAY GetCameraRay(XMFLOAT2& pt);
@@ -63,7 +65,7 @@ private:
 	void DrawEntity(ENTITY* pEntity, TILE& tile);
 	void FillTriangle(DRAWCALL& dc);
 	bool Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8_t* src, int srcW, int srcH, int srcX, int srcY, int w, int h);
-	static void PixelShader(PS_DATA& data);
+	static void PixelShader(PS_IO& io);
 
 	void Present();
 
@@ -146,20 +148,13 @@ private:
 	int m_fpsCount;
 
 	// Entity
-	std::vector<ENTITY*> m_entities;
-	std::vector<ENTITY*> m_sortedEntities;
-	int m_entityCount;
-	std::vector<ENTITY*> m_bornEntities;
-	int m_bornEntityCount;
-	std::vector<ENTITY*> m_deadEntities;
-	int m_deadEntityCount;
+	MANAGER<ENTITY> m_entities;
+
+	// Particle
+	PARTICLE_DATA m_particleData;
+	PARTICLE_PHYSICS m_particlePhysics;
+	MANAGER<PARTICLE_EMITTER> m_particleEmitters;
 
 	// Sprite
-	std::vector<SPRITE*> m_sprites;
-	std::vector<SPRITE*> m_sortedSprites;
-	int m_spriteCount;
-	std::vector<SPRITE*> m_bornSprites;
-	int m_bornSpriteCount;
-	std::vector<SPRITE*> m_deadSprites;
-	int m_deadSpriteCount;
+	MANAGER<SPRITE> m_sprites;
 };

@@ -54,7 +54,7 @@ inline XMVECTOR XMDIR					= g_XMIdentityR2;
 struct AABB;
 struct CAMERA;
 struct OBB;
-struct PS_DATA;
+struct PS_IO;
 struct TILE;
 class Engine;
 
@@ -65,7 +65,7 @@ using i32								= __int32;
 using ui32								= unsigned __int32;
 using i64								= __int64;
 using ui64								= unsigned __int64;
-using PS_FUNC							= void(*)(PS_DATA& data);
+using PS_FUNC							= void(*)(PS_IO& data);
 
 // Macro
 #define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
@@ -104,6 +104,7 @@ inline XMFLOAT3 ORANGE					= { 1.0f, 0.5f, 0.0f };
 // Engine
 #include "UI.h"
 #include "Font.h"
+#include "Particle.h"
 #include "Geometry.h"
 #include "Shader.h"
 #include "Entity.h"

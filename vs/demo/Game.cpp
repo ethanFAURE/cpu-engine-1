@@ -139,8 +139,8 @@ void Game::OnPostRender()
 	DrawText(&m_font, info.c_str(), GetWidth()/2, 10, TEXT_CENTER);
 }
 
-void Game::MyPixelShader(PS_DATA& data)
+void Game::MyPixelShader(PS_IO& io)
 {
 	// garder seulement le rouge du pixel éclairé
-	data.out.x = data.in.color.x;
+	io.color.x = io.p.color.x;
 }
