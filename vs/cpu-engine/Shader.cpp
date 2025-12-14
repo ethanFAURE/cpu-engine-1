@@ -2,10 +2,13 @@
 
 MATERIAL::MATERIAL()
 {
-	//lighting = UNLIT;
+#ifdef _DEBUG
 	lighting = GOURAUD;
-	//lighting = LAMBERT;
+#else
+	lighting = LAMBERT;
+#endif
+
 	ps = nullptr;
-	color = { 1.0f, 1.0f, 1.0f };
+	color = WHITE;
 	values = nullptr;
 }

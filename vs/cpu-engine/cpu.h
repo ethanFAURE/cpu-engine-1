@@ -25,20 +25,7 @@
 // Config
 ///////////
 
-// Enable CONFIG_GPU for improved stretching when window size != render size or if you want to use V-Sync
-//#define CONFIG_GPU
-
-// Enable CONFIG_MT if you want to use Multi-Threading
-#ifdef _DEBUG
-	//#define CONFIG_MT
-#else
-	#define CONFIG_MT
-#endif
-
-// Enable CONFIG_MT_DEBUG if you want to check Multi-Threading
-#ifdef CONFIG_MT
-	//#define CONFIG_MT_DEBUG
-#endif
+#include "config.h"
 
 // DirectX
 ////////////
@@ -84,15 +71,25 @@ using PS_FUNC							= void(*)(PS_DATA& data);
 #define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
 #define RELPTR(p)						{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
 
+// Float3
+inline XMFLOAT3 ZERO					= { 0.0f, 0.0f, 0.0f };
+inline XMFLOAT3 ONE						= { 1.0f, 1.0f, 1.0f };
+inline XMFLOAT3 WHITE					= { 1.0f, 1.0f, 1.0f };
+inline XMFLOAT3 BLACK					= { 0.0f, 0.0f, 0.0f };
+inline XMFLOAT3 RED						= { 1.0f, 0.0f, 0.0f };
+inline XMFLOAT3 BLUE					= { 0.0f, 0.0f, 1.0f };
+inline XMFLOAT3 GREEN					= { 0.0f, 1.0f, 0.0f };
+inline XMFLOAT3 ORANGE					= { 1.0f, 0.5f, 0.0f };
+
 // Light
 #define UNLIT							0
 #define GOURAUD							1
 #define LAMBERT							2
 
 // Text
-#define LEFT							0
-#define CENTER							1
-#define RIGHT							2
+#define TEXT_LEFT						0
+#define TEXT_CENTER						1
+#define TEXT_RIGHT						2
 
 // Depth
 #define DEPTH_READ						1

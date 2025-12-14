@@ -7,8 +7,8 @@ VERTEX::VERTEX()
 
 void VERTEX::Identity()
 {
-	pos = { 0.0f, 0.0f, 0.0f };
-	color = { 1.0f, 1.0f, 1.0f };
+	pos = ZERO;
+	color = WHITE;
 	normal = { 0.0f, 0.0f, 1.0f };
 }
 
@@ -264,7 +264,6 @@ void MESH::CalculateNormals()
 		normalAccumulator[t.v[1].pos] = XMVectorAdd(normalAccumulator[t.v[1].pos], faceNormal);
 		normalAccumulator[t.v[2].pos] = XMVectorAdd(normalAccumulator[t.v[2].pos], faceNormal);
 	}
-
 	for ( TRIANGLE& t : triangles )
 	{
 		for ( int i=0 ; i<3 ; i++ )
@@ -312,6 +311,111 @@ void MESH::CalculateBox()
 	radius = std::sqrt(r2);
 }
 
+void MESH::CreateCube(float halfSize, XMFLOAT3 color)
+{
+	const float s = halfSize; 
+	XMFLOAT3 p0 = { -s, -s, -s };							// Avant Bas Gauche
+	XMFLOAT3 p1 = {  s, -s, -s };							// Avant Bas Droite
+	XMFLOAT3 p2 = {  s,  s, -s };							// Avant Haut Droite
+	XMFLOAT3 p3 = { -s,  s, -s };							// Avant Haut Gauche
+	XMFLOAT3 p4 = { -s, -s,  s };							// Arrière Bas Gauche
+	XMFLOAT3 p5 = {  s, -s,  s };							// Arrière Bas Droite
+	XMFLOAT3 p6 = {  s,  s,  s };							// Arrière Haut Droite
+	XMFLOAT3 p7 = { -s,  s,  s };							// Arrière Haut Gauche
+	AddFace(p0, p1, p2, p3, color);							// Face Avant (Z = -0.5)
+	AddFace(p5, p4, p7, p6, color);							// Face Arrière (Z = +0.5)
+	AddFace(p1, p5, p6, p2, color);							// Face Droite (X = +0.5)
+	AddFace(p4, p0, p3, p7, color);							// Face Gauche (X = -0.5)
+	AddFace(p3, p2, p6, p7, color);							// Face Haut (Y = +0.5)
+	AddFace(p4, p5, p1, p0, color);							// Face Bas (Y = -0.5)
+	Optimize();
+}
+
+void MESH::CreateCircle(float radius, int count, XMFLOAT3 color)
+{
+	if ( count<3 )
+		return;
+
+	float step = XM_2PI / count;
+	float angle = 0.0f;
+	XMFLOAT3 p1, p2, p3;
+	p1.x = 0.0f;
+	p1.y = 0.0f;
+	p1.z = 0.0f;
+	p2.y = 0.0f;
+	p3.y = 0.0f;
+	for ( int i=0 ; i<count ; i++ )
+	{
+		p2.x = cosf(angle) * radius;
+		p2.z = sinf(angle) * radius;
+		p3.x = cosf(angle+step) * radius;
+		p3.z = sinf(angle+step) * radius;
+		AddTriangle(p1, p2, p3, color);
+		angle += step;
+	}
+	Optimize();
+}
+
+void MESH::CreateSphere(float radius, int stacks, int slices, XMFLOAT3 color1, XMFLOAT3 color2)
+{
+	Clear();
+	if ( stacks<2 ) stacks = 2; // minimum pour avoir un haut et un bas
+	if ( slices<3 ) slices = 3; // minimum pour fermer correctement
+	for ( int i=0 ; i<stacks ; ++i )
+	{
+		// theta0/theta1 délimitent une bande (du haut vers le bas)
+		const float v0 = (float)i / (float)stacks;
+		const float v1 = (float)(i + 1) / (float)stacks;
+		const float theta0 = v0 * XM_PI;
+		const float theta1 = v1 * XM_PI;
+		for ( int j=0,k=0 ; j<slices ; ++j )
+		{
+			const float u0 = (float)j / (float)slices;
+			const float u1 = (float)(j + 1) / (float)slices;
+			const float phi0 = u0 * XM_2PI;
+			const float phi1 = u1 * XM_2PI;
+
+			// 4 coins du quad (bande i, secteur j)
+			// p00 = (theta0, phi0)
+			// p01 = (theta0, phi1)
+			// p10 = (theta1, phi0)
+			// p11 = (theta1, phi1)
+			XMFLOAT3 p00 = SphericalPoint(radius, theta0, phi0);
+			XMFLOAT3 p01 = SphericalPoint(radius, theta0, phi1);
+			XMFLOAT3 p10 = SphericalPoint(radius, theta1, phi0);
+			XMFLOAT3 p11 = SphericalPoint(radius, theta1, phi1);
+			XMFLOAT3& color = k==0 ? color1 : color2;
+
+			// Triangles dégénérés (theta = 0 ou PI)
+			const bool topBand = i==0;
+			const bool bottomBand = i==stacks-1;
+			if ( topBand )
+			{
+				// Au pôle nord, p00 et p01 sont quasiment identiques (theta0=0).
+				// Triangle orienté vers l'extérieur (CCW vu de l'extérieur).
+				// On utilise: p00 (sommet), p10 (bas gauche), p11 (bas droite)
+				AddTriangle(p00, p10, p11, color);
+			}
+			else if ( bottomBand )
+			{
+				// Au pôle sud, p10 et p11 sont quasiment identiques (theta1=PI).
+				// On utilise: p10 (sommet bas), p01 (haut droite), p00 (haut gauche)
+				AddTriangle(p10, p01, p00, color);
+			}
+			else
+			{
+				// Bande intermédiaire : 2 triangles pour le quad
+				// Winding CCW (vu depuis l'extérieur)
+				AddTriangle(p00, p10, p11, const_cast<XMFLOAT3&>(color));
+				AddTriangle(p00, p11, p01, const_cast<XMFLOAT3&>(color));
+			}
+
+			if ( ++k==2 )
+				k = 0;
+		}
+	}
+	Optimize();
+}
 
 void MESH::CreateSpaceship()
 {
@@ -335,53 +439,5 @@ void MESH::CreateSpaceship()
 	AddTriangle(nose, rBot, wRight, c4);				// Avant Droit bas
 	AddTriangle(wLeft, rTop, rBot, c5);					// Moteur Gauche
 	AddTriangle(wRight, rBot, rTop, c6);				// Moteur Droit
-	Optimize();
-}
-
-void MESH::CreateCube()
-{
-	const float s = 0.5f; 
-	XMFLOAT3 p0 = { -s, -s, -s };							// Avant Bas Gauche
-	XMFLOAT3 p1 = {  s, -s, -s };							// Avant Bas Droite
-	XMFLOAT3 p2 = {  s,  s, -s };							// Avant Haut Droite
-	XMFLOAT3 p3 = { -s,  s, -s };							// Avant Haut Gauche
-	XMFLOAT3 p4 = { -s, -s,  s };							// Arrière Bas Gauche
-	XMFLOAT3 p5 = {  s, -s,  s };							// Arrière Bas Droite
-	XMFLOAT3 p6 = {  s,  s,  s };							// Arrière Haut Droite
-	XMFLOAT3 p7 = { -s,  s,  s };							// Arrière Haut Gauche
-	
-	XMFLOAT3 c1 = ToColor(255, 255, 255);
-	AddFace(p0, p1, p2, p3, c1);							// Face Avant (Z = -0.5)
-	AddFace(p5, p4, p7, p6, c1);							// Face Arrière (Z = +0.5)
-	AddFace(p1, p5, p6, p2, c1);							// Face Droite (X = +0.5)
-	AddFace(p4, p0, p3, p7, c1);							// Face Gauche (X = -0.5)
-	AddFace(p3, p2, p6, p7, c1);							// Face Haut (Y = +0.5)
-	AddFace(p4, p5, p1, p0, c1);							// Face Bas (Y = -0.5)
-	Optimize();
-}
-
-void MESH::CreateCircle(float radius, int count)
-{
-	if ( count<3 )
-		return;
-
-	XMFLOAT3 c1 = ToColor(255, 255, 255);
-	float step = XM_2PI / count;
-	float angle = 0.0f;
-	XMFLOAT3 p1, p2, p3;
-	p1.x = 0.0f;
-	p1.y = 0.0f;
-	p1.z = 0.0f;
-	p2.y = 0.0f;
-	p3.y = 0.0f;
-	for ( int i=0 ; i<count ; i++ )
-	{
-		p2.x = cosf(angle) * radius;
-		p2.z = sinf(angle) * radius;
-		p3.x = cosf(angle+step) * radius;
-		p3.z = sinf(angle+step) * radius;
-		AddTriangle(p1, p2, p3, c1);
-		angle += step;
-	}
 	Optimize();
 }

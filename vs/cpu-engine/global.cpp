@@ -51,3 +51,12 @@ int Clamp(int v, int min, int max)
 		return max;
 	return v;
 }
+
+XMFLOAT3 SphericalPoint(float r, float theta, float phi)
+{
+	float st = sinf(theta);
+	float ct = cosf(theta);
+	float sp = sinf(phi);
+	float cp = cosf(phi);
+	return XMFLOAT3(r * st * cp, r * ct, r * st * sp);
+}

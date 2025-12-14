@@ -7,8 +7,8 @@ TRANSFORM::TRANSFORM()
 
 void TRANSFORM::Identity()
 {
-	pos = { 0.0f, 0.0f, 0.0f };
-	sca = { 1.0f, 1.0f, 1.0f };
+	pos = ZERO;
+	sca = ONE;
 	ResetRotation();
 }
 

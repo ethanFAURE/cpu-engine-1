@@ -28,7 +28,7 @@ public:
 	RAY GetCameraRay(XMFLOAT2& pt);
 	CAMERA* GetCamera();
 
-	void DrawText(FONT* pFont, const char* text, int x, int y, int align = LEFT);
+	void DrawText(FONT* pFont, const char* text, int x, int y, int align = TEXT_LEFT);
 	void DrawSprite(SPRITE* pSprite);
 	void DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color);
 	void DrawVertLine(int y1, int y2, int x, XMFLOAT3& color);

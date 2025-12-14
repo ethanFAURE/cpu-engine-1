@@ -24,5 +24,5 @@ struct FONT
 	GLYPH glyph[256];
 
 	FONT();
-	bool Create(int fontPx = 24, XMFLOAT3 color = {1.0f,1.0f,1.0f}, const char* fontName = "Consolas", int cellW = -1, int cellH = -1, int firstChar = 32, int lastChar = 255);
+	bool Create(int fontPx = 24, XMFLOAT3 color = WHITE, const char* fontName = "Consolas", int cellW = -1, int cellH = -1, int firstChar = 32, int lastChar = 255);
 };

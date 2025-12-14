@@ -22,7 +22,8 @@ void Game::OnStart()
 	m_font.Create(18);
 	m_texture.Load("bird.png");
 	m_meshShip.CreateSpaceship();
-	m_meshCube.CreateCube();
+	m_meshMissile.CreateSphere(0.5f);
+	m_meshSphere.CreateSphere(2.0f, 16, 16, ToColor(224, 224, 224));
 
 	// UI
 	m_pSprite = CreateSprite();
@@ -43,6 +44,11 @@ void Game::OnStart()
 	m_pShip->transform.pos.y = -3.0f;
 	m_pShip->pMaterial = &m_materialShip;
 	m_missileSpeed = 10.0f;
+	m_pBall = CreateEntity();
+	m_pBall->pMesh = &m_meshSphere;
+	m_pBall->transform.pos.x = 3.0f;
+	m_pBall->transform.pos.y = 3.0f;
+	m_pBall->transform.pos.z = 5.0f;
 }
 
 void Game::OnUpdate()
@@ -58,9 +64,6 @@ void Game::OnUpdate()
 	// Eloigne le vaisseau
 	m_pShip->transform.pos.z += m_dt * 1.0f;
 
-	// Camera
-	m_camera.transform.AddYPR(0.0f, 0.0f, m_dt*0.1f);
-
 	// Missiles
 	for ( auto it=m_missiles.begin() ; it!=m_missiles.end() ; )
 	{
@@ -75,11 +78,17 @@ void Game::OnUpdate()
 			++it;
 	}
 
+	// Ball
+	m_pBall->transform.AddYPR(m_dt);
+
+	// Camera
+	m_camera.transform.AddYPR(0.0f, 0.0f, m_dt*0.1f);
+
 	// Fire
 	if ( m_input.IsKey(VK_SPACE) )
 	{
 		ENTITY* pMissile = CreateEntity();
-		pMissile->pMesh = &m_meshCube;
+		pMissile->pMesh = &m_meshMissile;
 		pMissile->transform.SetScaling(0.2f);
 		pMissile->transform.pos = m_pShip->transform.pos;
 		pMissile->transform.SetRotation(m_pShip->transform);
@@ -92,10 +101,11 @@ void Game::OnUpdate()
 		GetCursor(pt);
 		RAY ray = GetCameraRay(pt);
 		ENTITY* pMissile = CreateEntity();
-		pMissile->pMesh = &m_meshCube;
+		pMissile->pMesh = &m_meshMissile;
 		pMissile->transform.SetScaling(0.2f);
 		pMissile->transform.pos = ray.pos;
 		pMissile->transform.LookTo(ray.dir);
+		pMissile->transform.Move(1.5f);
 		pMissile->pMaterial = &m_materialMissile;
 		m_missiles.push_back(pMissile);
 	}
@@ -125,7 +135,7 @@ void Game::OnPostRender()
 	info += std::to_string(m_statsThreadCount) + " threads, ";
 	info += std::to_string(m_statsTileCount) + " tiles\n";
 	info += "(FIRE: space or left button)";
-	DrawText(&m_font, info.c_str(), GetWidth()/2, 10, CENTER);
+	DrawText(&m_font, info.c_str(), GetWidth()/2, 10, TEXT_CENTER);
 }
 
 void Game::MyPixelShader(PS_DATA& data)

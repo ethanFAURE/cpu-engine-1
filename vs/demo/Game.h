@@ -19,7 +19,8 @@ private:
 	// Resources
 	FONT m_font;
 	MESH m_meshShip;
-	MESH m_meshCube;
+	MESH m_meshMissile;
+	MESH m_meshSphere;
 	TEXTURE m_texture;
 
 	// UI
@@ -33,4 +34,5 @@ private:
 	ENTITY* m_pShip;
 	std::list<ENTITY*> m_missiles;
 	float m_missileSpeed;
+	ENTITY* m_pBall;
 };

@@ -7,3 +7,5 @@ XMFLOAT3 ToColor(int r, int g, int b);
 float Clamp(float v);
 float Clamp(float v, float min, float max);
 int Clamp(int v, int min, int max);
+
+XMFLOAT3 SphericalPoint(float r, float theta, float phi);

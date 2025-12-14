@@ -381,8 +381,8 @@ void Engine::DrawText(FONT* pFont, const char* text, int x, int y, int align)
 	auto DrawLine = [&](const char* start, int len, int penY)
 	{
 		int penX = x;
-		if ( align==CENTER ) penX = x - (len * cw) / 2;
-		else if ( align==RIGHT ) penX = x - (len * cw);
+		if ( align==TEXT_CENTER ) penX = x - (len * cw) / 2;
+		else if ( align==TEXT_RIGHT ) penX = x - (len * cw);
 		for ( int i=0 ; i<len ; ++i )
 		{
 			const byte c = (byte)start[i];
@@ -855,8 +855,7 @@ void Engine::Render_Tile(int iTile)
 	}
 
 #ifdef CONFIG_MT_DEBUG
-	XMFLOAT3 white = ToColor(255, 255, 255);
-	DrawRectangle(tile.left, tile.top, tile.right-tile.left, tile.bottom-tile.top, white);
+	DrawRectangle(tile.left, tile.top, tile.right-tile.left, tile.bottom-tile.top, WHITE);
 #endif
 }
 
@@ -1018,6 +1017,13 @@ void Engine::DrawEntity(ENTITY* pEntity, TILE& tile)
 		dc.pTile = &tile;
 		dc.depth = pEntity->depth;
 		FillTriangle(dc);
+
+		// Wireframe
+#ifdef CONFIG_WIREFRAME
+		DrawLine((int)screen[0].x, (int)screen[0].y, screen[0].z, (int)screen[1].x, (int)screen[1].y, screen[1].z, WHITE);
+		DrawLine((int)screen[1].x, (int)screen[1].y, screen[1].z, (int)screen[2].x, (int)screen[2].y, screen[2].z, WHITE);
+		DrawLine((int)screen[2].x, (int)screen[2].y, screen[2].z, (int)screen[0].x, (int)screen[0].y, screen[0].z, WHITE);
+#endif
 	}
 }
 
