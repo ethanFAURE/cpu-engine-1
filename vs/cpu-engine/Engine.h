@@ -43,7 +43,8 @@ protected:
 	void Update_Purge();
 	void Render();
 	void Render_Sort();
-	void Render_Box();
+	void Render_Bounding();
+	void Render_Clip();
 	void Render_Tile();
 	void Render_Tile(int iTile);
 	void Render_UI();

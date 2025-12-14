@@ -4,8 +4,6 @@ struct GLYPH
 {
 	int x = 0, y = 0, w = 0, h = 0;
 	int advance = 0;
-	int bearingX = 0;
-	int bearingY = 0;
 	bool valid = false;
 };
 

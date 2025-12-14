@@ -641,13 +641,11 @@ void Engine::Update_Purge()
 
 void Engine::Render()
 {
-	// Stats
-	m_clipEntityCount = 0;
-
 	// Prepare
 	m_camera.Update();
 	Render_Sort();
-	Render_Box();
+	Render_Bounding();
+	Render_Clip();
 	Render_Tile();
 
 	// Background
@@ -690,16 +688,18 @@ void Engine::Render()
 
 void Engine::Render_Sort()
 {
+	// Entities
 	std::sort(m_sortedEntities.begin(), m_sortedEntities.begin()+m_entityCount, [](const ENTITY* pA, const ENTITY* pB) { return pA->view.z < pB->view.z; });
 	for ( int i=0 ; i<m_entityCount ; i++ )
 		m_sortedEntities[i]->sortedIndex = i;
 
+	// Sprites
 	std::sort(m_sortedSprites.begin(), m_sortedSprites.begin()+m_spriteCount, [](const SPRITE* pA, const SPRITE* pB) { return pA->z < pB->z; });
 	for ( int i=0 ; i<m_spriteCount ; i++ )
 		m_sortedSprites[i]->sortedIndex = i;
 }
 
-void Engine::Render_Box()
+void Engine::Render_Bounding()
 {
 	float width = (float)m_renderWidth;
 	float height = (float)m_renderHeight;
@@ -709,9 +709,6 @@ void Engine::Render_Box()
 		ENTITY* pEntity = m_entities[iEntity];
 		if ( pEntity->dead )
 			continue;
-
-		// Info
-		pEntity->clipped = false;
 
 		// World
 		pEntity->transform.Update();
@@ -738,6 +735,27 @@ void Engine::Render_Box()
 		XMVECTOR pos = XMLoadFloat3(&pEntity->transform.pos);
 		pos = XMVector3TransformCoord(pos, matView);
 		XMStoreFloat3(&pEntity->view, pos);
+	}
+}
+
+void Engine::Render_Clip()
+{
+	m_clipEntityCount = 0;
+	for ( int iEntity=0 ; iEntity<m_entityCount ; iEntity++ )
+	{
+		ENTITY* pEntity = m_entities[iEntity];
+		if ( pEntity->dead )
+			continue;
+
+		if ( m_camera.frustum.Intersect(pEntity->transform.pos, pEntity->radius) )
+		{
+			pEntity->clipped = false;
+		}
+		else
+		{
+			pEntity->clipped = true;
+			m_clipEntityCount++;
+		}
 	}
 }
 
@@ -987,13 +1005,6 @@ void Engine::DrawSky()
 
 void Engine::DrawEntity(ENTITY* pEntity, TILE& tile)
 {
-	if ( m_camera.frustum.Intersect(pEntity->transform.pos, pEntity->radius)==false )
-	{
-		pEntity->clipped = true; // todo: not safe
-		m_clipEntityCount++;
-		return;
-	}
-
 	MATERIAL& material = pEntity->pMaterial ? *pEntity->pMaterial : m_material;
 	XMMATRIX matWorld = XMLoadFloat4x4(&pEntity->transform.world);
 	XMMATRIX normalMat = XMMatrixTranspose(XMMatrixInverse(nullptr, matWorld));
