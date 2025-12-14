@@ -51,10 +51,10 @@ private:
 	void Update_Purge();
 
 	void Render();
-	void Render_Sort();
-	void Render_Bounding();
-	void Render_Clip();
-	void Render_Tile();
+	void Render_SortZ();
+	void Render_RecalculateMatrices();
+	void Render_ApplyClipping();
+	void Render_PrepareTiles();
 	void Render_Tile(int iTile);
 	void Render_UI();
 
@@ -96,6 +96,7 @@ protected:
 	int m_statsClipEntityCount;
 	int m_statsThreadCount;
 	int m_statsTileCount;
+	int m_statsDrawnTriangleCount;
 
 private:
 	static Engine* s_pEngine;

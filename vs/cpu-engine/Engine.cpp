@@ -693,10 +693,10 @@ void Engine::Render()
 {
 	// Prepare
 	m_camera.Update();
-	Render_Sort();
-	Render_Bounding();
-	Render_Clip();
-	Render_Tile();
+	Render_SortZ();
+	Render_RecalculateMatrices();
+	Render_ApplyClipping();
+	Render_PrepareTiles();
 
 	// Background
 	if ( m_sky )
@@ -708,6 +708,7 @@ void Engine::Render()
 	OnPreRender();
 
 	// Entities
+	m_statsDrawnTriangleCount = 0;
 #ifdef CONFIG_MT_DEBUG
 	for ( int i=0 ; i<m_threadCount ; i++ )
 	{
@@ -736,7 +737,7 @@ void Engine::Render()
 #endif
 }
 
-void Engine::Render_Sort()
+void Engine::Render_SortZ()
 {
 	// Entities
 	std::sort(m_sortedEntities.begin(), m_sortedEntities.begin()+m_entityCount, [](const ENTITY* pA, const ENTITY* pB) { return pA->view.z < pB->view.z; });
@@ -749,7 +750,7 @@ void Engine::Render_Sort()
 		m_sortedSprites[i]->sortedIndex = i;
 }
 
-void Engine::Render_Bounding()
+void Engine::Render_RecalculateMatrices()
 {
 	float width = (float)m_renderWidth;
 	float height = (float)m_renderHeight;
@@ -788,7 +789,7 @@ void Engine::Render_Bounding()
 	}
 }
 
-void Engine::Render_Clip()
+void Engine::Render_ApplyClipping()
 {
 	m_statsClipEntityCount = 0;
 	for ( int iEntity=0 ; iEntity<m_entityCount ; iEntity++ )
@@ -809,7 +810,7 @@ void Engine::Render_Clip()
 	}
 }
 
-void Engine::Render_Tile()
+void Engine::Render_PrepareTiles()
 {
 	// Reset
 	m_nextTile = 0;
@@ -1017,6 +1018,7 @@ void Engine::DrawEntity(ENTITY* pEntity, TILE& tile)
 		dc.pTile = &tile;
 		dc.depth = pEntity->depth;
 		FillTriangle(dc);
+		m_statsDrawnTriangleCount++;
 
 		// Wireframe
 #ifdef CONFIG_WIREFRAME
