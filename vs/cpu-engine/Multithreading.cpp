@@ -20,7 +20,12 @@ void ThreadJob::OnCallback()
 			if ( index>=m_count )
 				break;
 
-			pEngine->Render_Entity(index);
+			pEngine->Render_Tile(index);
+
+#ifdef CONFIG_MT_DEBUG
+			pEngine->Present();
+			Sleep(100);
+#endif
 		}
 
 		// End

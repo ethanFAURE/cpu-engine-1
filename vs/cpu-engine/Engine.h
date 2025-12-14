@@ -45,13 +45,16 @@ protected:
 	void Render_Sort();
 	void Render_Box();
 	void Render_Tile();
-	void Render_Entity(int iTile);
+	void Render_Tile(int iTile);
 	void Render_UI();
 
 	void Present();
 	void Clear(XMFLOAT3& color);
 	void DrawText(FONT* pFont, const char* text, int x, int y);
 	void DrawSprite(SPRITE* pSprite);
+	void DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color);
+	void DrawVertLine(int y1, int y2, int x, XMFLOAT3& color);
+	void DrawRectangle(int x, int y, int w, int h, XMFLOAT3& color);
 	void DrawSky();
 	void DrawEntity(ENTITY* pEntity, TILE& tile);
 	void FillTriangle(XMFLOAT3* tri, VERTEXSHADER* vo, MATERIAL& material, TILE& tile);
@@ -85,7 +88,7 @@ protected:
 	bool m_bilinear;
 
 	// Surface
-#ifdef GPU_PRESENT
+#ifdef CONFIG_GPU
 	ID2D1Factory* m_pD2DFactory;
 	ID2D1HwndRenderTarget* m_pRenderTarget;
 	ID2D1Bitmap* m_pBitmap;

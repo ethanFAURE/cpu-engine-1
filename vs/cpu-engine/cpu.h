@@ -22,14 +22,28 @@
 #include <thread>
 #include <functional>
 
+// Config
+///////////
+
+// Enable CONFIG_GPU for improved stretching when window size != render size or if you want to use V-Sync
+//#define CONFIG_GPU
+
+// Enable CONFIG_MT if you want to use Multi-Threading
+#ifdef _DEBUG
+	//#define CONFIG_MT
+#else
+	#define CONFIG_MT
+#endif
+
+// Enable CONFIG_MT_DEBUG if you want to check Multi-Threading
+#ifdef CONFIG_MT
+	//#define CONFIG_MT_DEBUG
+#endif
+
 // DirectX
 ////////////
 
-// Enable GPU_PRESENT for improved stretching when window size != render size
-// or if you want to use V-Sync
-//#define GPU_PRESENT
-
-#ifdef GPU_PRESENT
+#ifdef CONFIG_GPU
 	#pragma comment(lib, "d2d1.lib")
 	#include <d2d1.h>
 #endif

@@ -9,7 +9,7 @@ Engine::Engine()
 	m_hWnd = nullptr;
 	m_threads = nullptr;
 
-#ifdef GPU_PRESENT
+#ifdef CONFIG_GPU
 	m_pD2DFactory = nullptr;
 	m_pRenderTarget = nullptr;
 	m_pBitmap = nullptr;
@@ -69,7 +69,7 @@ void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, 
 	m_depthBuffer.resize(m_renderPixelCount);
 
 	// Surface
-#ifdef GPU_PRESENT
+#ifdef CONFIG_GPU
 	HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &m_pD2DFactory);
 	FixDevice();
 #else
@@ -96,8 +96,9 @@ void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, 
 	m_deadEntityCount = 0;
 
 	// Tile
+#ifdef CONFIG_MT
 	m_threadCount = std::max(1u, std::thread::hardware_concurrency());
-#ifdef _DEBUG
+#else
 	m_threadCount = 1;
 #endif
 	m_tileColCount = static_cast<unsigned int>(std::ceil(std::sqrt(m_threadCount)));
@@ -157,7 +158,7 @@ void Engine::Uninitialize()
 	m_threads = nullptr;
 
 	// Surface
-#ifdef GPU_PRESENT
+#ifdef CONFIG_GPU
 	RELPTR(m_pBitmap);
 	RELPTR(m_pRenderTarget);
 	RELPTR(m_pD2DFactory);
@@ -241,7 +242,7 @@ void Engine::FixWindow()
 	m_windowWidth = rc.right-rc.left;
 	m_windowHeight = rc.bottom-rc.top;
 
-#ifdef GPU_PRESENT
+#ifdef CONFIG_GPU
 	if ( m_pRenderTarget )
 		m_pRenderTarget->Resize(D2D1::SizeU(m_windowWidth, m_windowHeight));
 #endif
@@ -255,7 +256,7 @@ void Engine::FixProjection()
 
 void Engine::FixDevice()
 {
-#ifdef GPU_PRESENT
+#ifdef CONFIG_GPU
 	D2D1_SIZE_U size = D2D1::SizeU(m_windowWidth, m_windowHeight);
 	m_pD2DFactory->CreateHwndRenderTarget(D2D1::RenderTargetProperties(), D2D1::HwndRenderTargetProperties(m_hWnd, size), &m_pRenderTarget);
 	
@@ -658,11 +659,19 @@ void Engine::Render()
 	// Callback
 	OnPreRender();
 
-	// Entities (Multi-Threading)
+	// Entities
+#ifdef CONFIG_MT_DEBUG
+	for ( int i=0 ; i<m_threadCount ; i++ )
+	{
+		SetEvent(m_threads[i].m_hEventStart);
+		WaitForSingleObject(m_threads[i].m_hEventEnd, INFINITE);
+	}
+#else
 	for ( int i=0 ; i<m_threadCount ; i++ )
 		SetEvent(m_threads[i].m_hEventStart);
 	for ( int i=0 ; i<m_threadCount ; i++ )
 		WaitForSingleObject(m_threads[i].m_hEventEnd, INFINITE);
+#endif
 
 	// Callback
 	OnPostRender();
@@ -672,6 +681,11 @@ void Engine::Render()
 
 	// Present
 	Present();
+
+	// MT
+#ifdef CONFIG_MT_DEBUG
+	Sleep(1000);
+#endif
 }
 
 void Engine::Render_Sort()
@@ -756,7 +770,7 @@ void Engine::Render_Tile()
 	}
 }
 
-void Engine::Render_Entity(int iTile)
+void Engine::Render_Tile(int iTile)
 {
 	TILE& tile = m_tiles[iTile];
 	for ( int iEntity=0 ; iEntity<m_entityCount ; iEntity++ )
@@ -771,6 +785,11 @@ void Engine::Render_Entity(int iTile)
 
 		DrawEntity(pEntity, tile);
 	}
+
+#ifdef CONFIG_MT_DEBUG
+	XMFLOAT3 white = ToColor(255, 255, 255);
+	DrawRectangle(tile.left, tile.top, tile.right-tile.left, tile.bottom-tile.top, white);
+#endif
 }
 
 void Engine::Render_UI()
@@ -791,7 +810,7 @@ void Engine::Render_UI()
 
 void Engine::Present()
 {
-#ifdef GPU_PRESENT
+#ifdef CONFIG_GPU
 	if ( m_pRenderTarget==nullptr || m_pBitmap==nullptr )
 		return;
 	
@@ -871,6 +890,41 @@ void Engine::DrawSprite(SPRITE* pSprite)
 	int height = pSprite->pTexture->height;
 	byte* dst = (byte*)m_colorBuffer.data();
 	Copy(dst, m_renderWidth, m_renderHeight, pSprite->x, pSprite->y, pSprite->pTexture->rgba, width, height, 0, 0, width, height);
+}
+
+void Engine::DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color)
+{
+	COLORREF bgr = ToBGR(color);
+	if ( y<0 || y>=m_renderHeight )
+		return;
+	x1 = Clamp(x1, 0, m_renderWidth);
+	x2 = Clamp(x2, 0, m_renderWidth);
+	ui32* buf = m_colorBuffer.data() + y*m_renderWidth;
+	for ( int i=x1 ; i<x2 ; i++ )
+		buf[i] = bgr;
+}
+
+void Engine::DrawVertLine(int y1, int y2, int x, XMFLOAT3& color)
+{
+	COLORREF bgr = ToBGR(color);
+	if ( x<0 || x>=m_renderWidth )
+		return;
+	y1 = Clamp(y1, 0, m_renderHeight);
+	y2 = Clamp(y2, 0, m_renderHeight);
+	ui32* buf = m_colorBuffer.data() + y1*m_renderWidth + x;
+	for ( int i=y1 ; i<y2 ; i++ )
+	{
+		*buf = bgr;
+		buf += m_renderWidth;
+	}
+}
+
+void Engine::DrawRectangle(int x, int y, int w, int h, XMFLOAT3& color)
+{
+	DrawHorzLine(x, x+w, y, color);
+	DrawHorzLine(x, x+w, y+h, color);
+	DrawVertLine(y, y+h, x, color);
+	DrawVertLine(y, y+h, x+w, color);
 }
 
 void Engine::DrawSky()
