@@ -2,13 +2,13 @@
 
 class Ship;
 
-class Game : public cpu_engine
+class App : public cpu_engine
 {
 public:
-	Game();
-	virtual ~Game();
+	App();
+	virtual ~App();
 
-	static Game* GetInstance() { return s_pGame; }
+	static App* GetInstance() { return s_pApp; }
 
 	void SpawnMissile();
 	void SpawnMissileWithMouse();
@@ -22,7 +22,7 @@ public:
 	static void MyPixelShader(cpu_ps_io& io);
 
 private:
-	inline static Game* s_pGame = nullptr;
+	inline static App* s_pApp = nullptr;
 
 	// Resources
 	cpu_font m_font;

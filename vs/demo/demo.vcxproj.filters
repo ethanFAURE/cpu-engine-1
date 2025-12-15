@@ -17,7 +17,7 @@
     <ClInclude Include="demo.h">
       <Filter>App</Filter>
     </ClInclude>
-    <ClInclude Include="Game.h">
+    <ClInclude Include="App.h">
       <Filter>App</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
@@ -31,7 +31,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>App</Filter>
     </ClCompile>
-    <ClCompile Include="Game.cpp">
+    <ClCompile Include="App.cpp">
       <Filter>App</Filter>
     </ClCompile>
   </ItemGroup>
