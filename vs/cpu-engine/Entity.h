@@ -153,6 +153,26 @@ struct MANAGER
 	}
 	void Purge()
 	{
+		// Born
+		for ( int i=0 ; i<bornCount ; i++ )
+		{
+			T* p = bornList[i];
+			if ( p->dead )
+				continue;
+			p->index = count;
+			p->sortedIndex = p->index;
+			if ( p->index<list.size() )
+				list[p->index] = p;
+			else
+				list.push_back(p);
+			if ( p->sortedIndex<sortedList.size() )
+				sortedList[p->sortedIndex] = p;
+			else
+				sortedList.push_back(p);
+			count++;
+		}
+		bornCount = 0;
+
 		// Dead
 		for ( int i=0 ; i<deadCount ; i++ )
 		{
@@ -178,29 +198,5 @@ struct MANAGER
 			count--;
 		}
 		deadCount = 0;
-
-		// Born
-		for ( int i=0 ; i<bornCount ; i++ )
-		{
-			T* p = bornList[i];
-			if ( p->dead )
-			{
-				delete bornList[i];
-				bornList[i] = nullptr;
-				continue;
-			}
-			p->index = count;
-			p->sortedIndex = p->index;
-			if ( p->index<list.size() )
-				list[p->index] = p;
-			else
-				list.push_back(p);
-			if ( p->sortedIndex<sortedList.size() )
-				sortedList[p->sortedIndex] = p;
-			else
-				sortedList.push_back(p);
-			count++;
-		}
-		bornCount = 0;
 	}
 };

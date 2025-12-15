@@ -24,7 +24,6 @@ void Game::Enter()
 	m_pFSM = CreateFSM(this);
 	m_pFSM->Add<StateLoad>();
 	m_pFSM->Add<StatePlay>();
-	//ReleaseFSM(m_pFSM);
 
 	// Resources
 	m_font.Create(18);
