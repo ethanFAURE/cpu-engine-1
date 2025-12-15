@@ -100,6 +100,7 @@ inline XMFLOAT3 ORANGE					= { 1.0f, 0.5f, 0.0f };
 #include "global.h"
 #include "Input.h"
 #include "Thread.h"
+#include "State.h"
 
 // Engine
 #include "UI.h"

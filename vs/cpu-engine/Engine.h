@@ -19,9 +19,13 @@ public:
 	int GetWidth() { return m_renderWidth; }
 	int GetHeight() { return m_renderWidth; }
 
+	template <typename T>
+	cpu_fsm<T>* CreateFSM(T* pInstance);
 	ENTITY* CreateEntity();
 	SPRITE* CreateSprite();
 	PARTICLE_EMITTER* CreateParticleEmitter();
+	template <typename T>
+	void ReleaseFSM(cpu_fsm<T>* pFSM);
 	void ReleaseEntity(ENTITY* pEntity);
 	void ReleaseSprite(SPRITE* pSprite);
 	void ReleaseParticleEmitter(PARTICLE_EMITTER* pEmitter);
@@ -50,6 +54,7 @@ private:
 
 	void Update();
 	void Update_Physics();
+	void Update_FSM();
 	void Update_Purge();
 
 	void Render();
@@ -147,6 +152,9 @@ private:
 	DWORD m_fpsTime;
 	int m_fpsCount;
 
+	// State
+	MANAGER<cpu_fsm_base> m_fsms;
+
 	// Entity
 	MANAGER<ENTITY> m_entities;
 
@@ -158,3 +166,17 @@ private:
 	// Sprite
 	MANAGER<SPRITE> m_sprites;
 };
+
+template <typename T>
+cpu_fsm<T>* Engine::CreateFSM(T* pInstance)
+{
+	cpu_fsm<T>* pFSM = new cpu_fsm<T>(pInstance);
+	m_fsms.Add((cpu_fsm_base*)pFSM);
+	return pFSM;
+}
+
+template <typename T>
+void Engine::ReleaseFSM(cpu_fsm<T>* pFSM)
+{
+	m_fsms.Release(pFSM);
+}

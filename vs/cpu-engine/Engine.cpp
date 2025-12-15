@@ -290,6 +290,11 @@ PARTICLE_EMITTER* Engine::CreateParticleEmitter()
 	return m_particleEmitters.Create();
 }
 
+//void Engine::ReleaseFSM(cpu_fsm* pFSM)
+//{
+//	m_fsms.Release(pFSM);
+//}
+
 void Engine::ReleaseEntity(ENTITY* pEntity)
 {
 	m_entities.Release(pEntity);
@@ -551,6 +556,9 @@ void Engine::Update()
 	// Physics
 	Update_Physics();
 
+	// FSM
+	Update_FSM();
+
 	// Callback
 	OnUpdate();
 
@@ -570,8 +578,21 @@ void Engine::Update_Physics()
 	}
 }
 
+void Engine::Update_FSM()
+{
+	for ( int i=0 ; i<m_fsms.count ; i++ )
+	{
+		cpu_fsm_base* pFSM = m_fsms[i];
+		if ( pFSM->dead )
+			continue;
+
+		pFSM->Update(m_dt);
+	}
+}
+
 void Engine::Update_Purge()
 {
+	m_fsms.Purge();
 	m_entities.Purge();
 	m_sprites.Purge();
 	m_particleEmitters.Purge();

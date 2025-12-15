@@ -132,6 +132,14 @@ struct MANAGER
 		bornCount++;
 		return p;
 	}
+	void Add(T* p)
+	{
+		if ( bornCount<bornList.size() )
+			bornList[bornCount] = p;
+		else
+			bornList.push_back(p);
+		bornCount++;
+	}
 	void Release(T* p)
 	{
 		if ( p==nullptr || p->dead )

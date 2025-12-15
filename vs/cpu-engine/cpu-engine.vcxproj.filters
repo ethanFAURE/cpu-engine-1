@@ -59,6 +59,9 @@
     <ClInclude Include="Particle.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="State.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Thread.cpp">
@@ -98,6 +101,9 @@
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="Particle.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="State.cpp">
       <Filter>Engine</Filter>
     </ClCompile>
   </ItemGroup>

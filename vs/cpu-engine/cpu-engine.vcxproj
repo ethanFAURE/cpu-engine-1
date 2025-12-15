@@ -89,6 +89,7 @@
     <ClInclude Include="Multithreading.h" />
     <ClInclude Include="Particle.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="State.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Thread.h" />
     <ClInclude Include="UI.h" />
@@ -107,6 +108,7 @@
     <ClCompile Include="Multithreading.cpp" />
     <ClCompile Include="Particle.cpp" />
     <ClCompile Include="Shader.cpp" />
+    <ClCompile Include="State.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
