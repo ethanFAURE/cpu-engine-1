@@ -145,6 +145,10 @@ private:
 	std::vector<uint32_t> m_colorBuffer;
 	std::vector<float> m_depthBuffer;
 
+	// Camera
+	bool m_cullFrontCCW = false; // DirectX default
+	float m_cullAreaEpsilon = 1e-6f;
+
 	// Tile
 	int m_tileWidth;
 	int m_tileHeight;

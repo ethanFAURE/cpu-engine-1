@@ -972,16 +972,16 @@ void cpu_engine::DrawEntity(cpu_entity* pEntity, cpu_tile& tile)
 			float ndcZ = vo[i].clipPos.z * vo[i].invW;			// [0,1] avec XMMatrixPerspectiveFovLH
 			screen[i].x = (ndcX + 1.0f) * m_renderWidthHalf;
 			screen[i].y = (1.0f - ndcY) * m_renderHeightHalf;
-			screen[i].z = Clamp(ndcZ);								// profondeur normalisée 0..1
+			screen[i].z = Clamp(ndcZ);							// profondeur normalisée 0..1
 		}
 		if ( safe==false )
 			continue;
 
-		// Culling (DX)
-		//float area = (screen[2].x-screen[0].x) * (screen[1].y-screen[0].y) - (screen[2].y-screen[0].y) * (screen[1].x-screen[0].x);
+		// Culling
 		float area = (screen[1].x-screen[0].x) * (screen[2].y-screen[0].y) - (screen[1].y-screen[0].y) * (screen[2].x-screen[0].x);
-		if ( area<=FLT_EPSILON )
-			continue;
+		bool isFront = m_cullFrontCCW ? (area>m_cullAreaEpsilon) : (area<-m_cullAreaEpsilon);
+		if ( isFront==false )
+			continue; // back-face or degenerated
 
 		// Pixel shader
 		dc.tri = screen;

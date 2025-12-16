@@ -315,16 +315,16 @@ void cpu_mesh::CreateCube(float halfSize, XMFLOAT3 color)
 {
 	Clear();
 	const float s = halfSize; 
-	XMFLOAT3 p0 = { -s, -s, -s };					// Avant Bas Gauche
-	XMFLOAT3 p1 = {  s, -s, -s };					// Avant Bas Droite
-	XMFLOAT3 p2 = {  s,  s, -s };					// Avant Haut Droite
-	XMFLOAT3 p3 = { -s,  s, -s };					// Avant Haut Gauche
-	XMFLOAT3 p4 = { -s, -s,  s };					// Arrière Bas Gauche
-	XMFLOAT3 p5 = {  s, -s,  s };					// Arrière Bas Droite
-	XMFLOAT3 p6 = {  s,  s,  s };					// Arrière Haut Droite
-	XMFLOAT3 p7 = { -s,  s,  s };					// Arrière Haut Gauche
-	AddFace(p0, p1, p2, p3, color);					// -Z (avant)
-	AddFace(p4, p7, p6, p5, color);					// +Z (arrière)
+	XMFLOAT3 p0 = { -s, -s, -s };
+	XMFLOAT3 p1 = {  s, -s, -s };
+	XMFLOAT3 p2 = {  s,  s, -s };
+	XMFLOAT3 p3 = { -s,  s, -s };
+	XMFLOAT3 p4 = { -s, -s,  s };
+	XMFLOAT3 p5 = {  s, -s,  s };
+	XMFLOAT3 p6 = {  s,  s,  s };
+	XMFLOAT3 p7 = { -s,  s,  s };
+	AddFace(p0, p1, p2, p3, color);					// -Z (back)
+	AddFace(p4, p7, p6, p5, color);					// +Z (front)
 	AddFace(p1, p5, p6, p2, color);					// +X (droite)
 	AddFace(p4, p0, p3, p7, color);					// -X (gauche)
 	AddFace(p3, p2, p6, p7, color);					// +Y (haut)
@@ -352,7 +352,7 @@ void cpu_mesh::CreateCircle(float radius, int count, XMFLOAT3 color)
 		p2.z = sinf(angle) * radius;
 		p3.x = cosf(angle+step) * radius;
 		p3.z = sinf(angle+step) * radius;
-		AddTriangle(p1, p3, p2, color);
+		AddTriangle(p1, p2, p3, color);
 		angle += step;
 	}
 	Optimize();

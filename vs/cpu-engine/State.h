@@ -29,8 +29,8 @@ struct cpu_fsm_base
 	int index;
 	int sortedIndex;
 	int state;
-	float globalTime;
-	float time;
+	float globalTotalTime;
+	float totalTime;
 
 protected:
 	void* pReceiver;
@@ -48,8 +48,8 @@ public:
 		pReceiver = nullptr;
 		state = -1;
 		pending = -1;
-		globalTime = 0.0f;
-		time = 0.0f;
+		globalTotalTime = 0.0f;
+		totalTime = 0.0f;
 		pGlobal = nullptr;
 	}
 
@@ -67,8 +67,8 @@ public:
 
 	void Update(float dt)
 	{
-		globalTime += dt;
-		time += dt;
+		globalTotalTime += dt;
+		totalTime += dt;
 
 		if ( pending!=state )
 		{
@@ -82,7 +82,7 @@ public:
 
 			if ( state!=-1 )
 			{
-				time = 0.0f;
+				totalTime = 0.0f;
 				states[state]->OnEnter(pReceiver, from);
 			}
 		}

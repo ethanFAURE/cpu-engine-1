@@ -53,7 +53,7 @@ void App::OnStart()
 	m_texture.Load("bird_amiga.png");
 	m_meshShip.CreateSpaceship();
 	m_meshMissile.CreateSphere(0.5f);
-	m_meshSphere.CreateSphere(2.0f, 16, 16, ToColor(224, 224, 224));
+	m_meshSphere.CreateSphere(2.0f, 12, 12, ToColor(224, 224, 224));
 
 	// UI
 	m_pSprite = CreateSprite();
@@ -228,7 +228,7 @@ void StateIdle::OnEnter(Ship& cur, int from)
 void StateIdle::OnExecute(Ship& cur)
 {
 	// Blink every 3 seconds
-	if ( cur.GetFSM()->time>3.0f )
+	if ( cur.GetFSM()->totalTime>3.0f )
 	{
 		cur.GetFSM()->ToState(StateBlink::id);
 		return;
@@ -249,8 +249,8 @@ void StateBlink::OnEnter(Ship& cur, int from)
 
 void StateBlink::OnExecute(Ship& cur)
 {
-	float v = fmod(cur.GetFSM()->time, 0.5f);
-	if ( v<0.25f )
+	float v = fmod(cur.GetFSM()->totalTime, 0.2f);
+	if ( v<0.1f )
 	{
 		cur.GetEntity()->visible = true;
 	}
@@ -259,7 +259,7 @@ void StateBlink::OnExecute(Ship& cur)
 		cur.GetEntity()->visible = false;
 	}
 
-	if ( cur.GetFSM()->time>2.0f )
+	if ( cur.GetFSM()->totalTime>1.0f )
 	{
 		cur.GetFSM()->ToState(StateIdle::id);
 		return;

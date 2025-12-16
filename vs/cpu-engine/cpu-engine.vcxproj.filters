@@ -50,9 +50,6 @@
     <ClInclude Include="Shader.h">
       <Filter>Engine</Filter>
     </ClInclude>
-    <ClInclude Include="config.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
     <ClInclude Include="Particle.h">
       <Filter>Engine</Filter>
     </ClInclude>
@@ -61,6 +58,9 @@
     </ClInclude>
     <ClInclude Include="png32.h">
       <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="config.h">
+      <Filter>Library</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
