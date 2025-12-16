@@ -75,24 +75,23 @@ protected:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-struct StateGlobal : public cpu_state<Ship>
+struct StateGlobal
 {
-	static inline int id;
-	static void OnExecute(Ship& cur);
+	void OnEnter(Ship& cur, int from);
+	void OnExecute(Ship& cur);
+	void OnExit(Ship& cur, int to);
 };
 
-struct StateIdle : public cpu_state<Ship>
+struct StateIdle
 {
-	static inline int id;
-	static void OnEnter(Ship& cur, int from);
-	static void OnExecute(Ship& cur);
-	static void OnExit(Ship& cur, int to);
+	void OnEnter(Ship& cur, int from);
+	void OnExecute(Ship& cur);
+	void OnExit(Ship& cur, int to);
 };
 
-struct StateBlink : public cpu_state<Ship>
+struct StateBlink
 {
-	static inline int id;
-	static void OnEnter(Ship& cur, int from);
-	static void OnExecute(Ship& cur);
-	static void OnExit(Ship& cur, int to);
+	void OnEnter(Ship& cur, int from);
+	void OnExecute(Ship& cur);
+	void OnExit(Ship& cur, int to);
 };

@@ -10,6 +10,7 @@ struct cpu_texture
 
 	cpu_texture();
 	~cpu_texture();
+
 	bool Load(const char* path);
 	void Close();
 };
@@ -32,5 +33,6 @@ struct cpu_sprite
 	bool visible;
 
 	cpu_sprite();
+
 	void CenterAnchor();
 };

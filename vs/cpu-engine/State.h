@@ -1,30 +1,9 @@
 #pragma once
 
-struct cpu_state_base
-{
-	virtual void OnEnter(void* user, int from) = 0;
-	virtual void OnExecute(void* user) = 0;
-	virtual void OnExit(void* user, int to) = 0;
-};
-
-template <typename T>
-struct cpu_state : public cpu_state_base
-{
-	using EnterFn = void(*)(T& instance, int from);
-	using ExecuteFn = void(*)(T& instance);
-	using ExitFn = void(*)(T& instance, int to);
-
-	EnterFn onEnter = nullptr;
-	ExecuteFn onExecute = nullptr;
-	ExitFn onExit = nullptr;
-
-	void OnEnter(void* user, int from) override { onEnter(*(T*)user, from); }
-	void OnExecute(void* user) override { onExecute(*(T*)user); }
-	void OnExit(void* user, int to) override { onExit(*(T*)user, to); }
-};
-
 struct cpu_fsm_base
 {
+	friend cpu_engine;
+
 	bool dead;
 	int index;
 	int sortedIndex;
@@ -33,71 +12,43 @@ struct cpu_fsm_base
 	float totalTime;
 
 protected:
-	void* pReceiver;
-	cpu_state_base* pGlobal;
-	std::vector<cpu_state_base*> states;
 	int pending;
 
 public:
-	cpu_fsm_base()
-	{
-		dead = false;
-		index = -1;
-		sortedIndex = -1;
+	cpu_fsm_base();
+	virtual ~cpu_fsm_base();
 
-		pReceiver = nullptr;
-		state = -1;
-		pending = -1;
-		globalTotalTime = 0.0f;
-		totalTime = 0.0f;
-		pGlobal = nullptr;
-	}
+	void ToState(int to);
 
-	virtual ~cpu_fsm_base()
-	{
-		for ( auto it=states.begin() ; it!=states.end() ; ++it )
-			delete *it;
-		delete pGlobal;
-	}
-
-	void ToState(int to)
-	{
-		pending = to;
-	}
-
-	void Update(float dt)
-	{
-		globalTotalTime += dt;
-		totalTime += dt;
-
-		if ( pending!=state )
-		{
-			int from = state;
-			int to = pending;
-
-			if ( state!=-1 )
-				states[state]->OnExit(pReceiver, to);
-
-			state = to;
-
-			if ( state!=-1 )
-			{
-				totalTime = 0.0f;
-				states[state]->OnEnter(pReceiver, from);
-			}
-		}
-
-		if ( state!=-1 )
-			states[state]->OnExecute(pReceiver);
-
-		if ( pGlobal )
-			pGlobal->OnExecute(pReceiver);
-	}
+protected:
+	virtual void Update(float dt) = 0;
 };
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
 struct cpu_fsm : public cpu_fsm_base
 {
+private:
+	struct _cpu_handle
+	{
+		using EnterFn = void(*)(void* self, T& cur, int from);
+		using ExecuteFn = void(*)(void* self, T& cur);
+		using ExitFn = void(*)(void* self, T& cur, int to);
+
+		void* self = nullptr;
+		EnterFn enter = nullptr;
+		ExecuteFn execute = nullptr;
+		ExitFn exit = nullptr;
+	};
+
+private:
+	T* pReceiver;
+	_cpu_handle globalState;
+	std::vector<_cpu_handle> states;
+
 public:
 	cpu_fsm(T* pRcv)
 	{
@@ -105,26 +56,101 @@ public:
 	}
 
 	template <typename S>
-	void SetGlobal()
-	{
-		if ( pGlobal )
-			return;
-		static_assert(std::is_base_of_v<cpu_state<T>, S>, "S is not derived from cpu_state<T>");
-		S* pState = new S;
-		pState->id = -1;
-		pState->onExecute = &S::OnExecute;
-		pGlobal = pState;
-	}
+	void SetGlobal();
 
 	template <typename S>
-	void Add()
+	void Add();
+
+protected:
+	template<typename S>
+	static void Enter(void* self, T& cur, int from)
 	{
-		static_assert(std::is_base_of_v<cpu_state<T>, S>, "S is not derived from cpu_state<T>");
-		S* pState = new S;
-		pState->id = (int)states.size();
-		pState->onEnter = &S::OnEnter;
-		pState->onExecute = &S::OnExecute;
-		pState->onExit = &S::OnExit;
-		states.push_back(pState);
+		static_cast<S*>(self)->OnEnter(cur, from);
 	}
+
+	template<typename S>
+	static void Execute(void* self, T& cur)
+	{
+		static_cast<S*>(self)->OnExecute(cur);
+	}
+
+	template<typename S>
+	static void Exit(void* self, T& cur, int to)
+	{
+		static_cast<S*>(self)->OnExit(cur, to);
+	}
+
+	void Update(float dt) override;
 };
+
+template <typename T>
+template <typename S>
+void cpu_fsm<T>::SetGlobal()
+{
+	if ( globalState.self )
+		return;
+
+	static S state;
+	globalState.self = &state;
+	globalState.enter = &Enter<S>;
+	globalState.execute = &Execute<S>;
+	globalState.exit = &Exit<S>;
+}
+
+template <typename T>
+template <typename S>
+void cpu_fsm<T>::Add()
+{
+	static S state;
+	_cpu_handle handle;
+	handle.self = &state;
+	handle.enter = &Enter<S>;
+	handle.execute = &Execute<S>;
+	handle.exit = &Exit<S>;
+
+	int id = (int)states.size();
+	if ( GetStateID<S>()==-1 )
+		GetStateID<S>() = id;
+
+	states.push_back(handle);
+}
+
+template <typename T>
+void cpu_fsm<T>::Update(float dt)
+{
+	globalTotalTime += dt;
+	totalTime += dt;
+	
+	if ( pending!=state )
+	{
+		int from = state;
+		int to = pending;
+	
+		if ( from!=-1 )
+		{
+			_cpu_handle& handle = states[from];
+			if ( handle.exit )
+				handle.exit(handle.self, *pReceiver, to);
+		}
+
+		state = to;
+	
+		if ( to!=-1 )
+ 		{
+			totalTime = 0.0f;
+			_cpu_handle& handle = states[to];
+			if ( handle.enter )
+				handle.enter(handle.self, *pReceiver, from);
+		}
+	}
+	
+	if ( state!=-1 )
+	{
+		_cpu_handle& handle = states[state];
+		if ( handle.execute )
+			handle.execute(handle.self, *pReceiver);
+	}
+	
+	if ( globalState.execute )
+		globalState.execute(globalState.self, *pReceiver);
+}

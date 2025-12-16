@@ -87,6 +87,7 @@ using PS_FUNC							= void(*)(cpu_ps_io& data);
 #define RELPTR(p)						{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
 #define I(p)							p::GetInstance()
 #define CAPTION(v)						SetWindowText(cpu.GetHWND(), std::to_string(v).c_str());
+#define ID(s)							GetStateID<s>()
 
 // Special
 #define cpu								cpu_engine::GetInstanceRef()
