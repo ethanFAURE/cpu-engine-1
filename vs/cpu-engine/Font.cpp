@@ -101,7 +101,7 @@ bool cpu_font::Create(int fontPx, XMFLOAT3 color, const char* fontName, int cell
 		const byte b = bgra[offset+0];
 		const byte g = bgra[offset+1];
 		const byte r = bgra[offset+2];
-		const byte a = std::max({ r, g, b }); // conserve l'antialias (gris -> alpha partiel)
+		const byte a = MAX({ r, g, b }); // conserve l'antialias (gris -> alpha partiel)
 		rgba[offset+0] = r;
 		rgba[offset+1] = g;
 		rgba[offset+2] = b;

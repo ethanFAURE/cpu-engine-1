@@ -82,10 +82,10 @@ void AlphaBlend_PremulSrcOver(const byte* src, byte* dst, int width, int height)
 
         ui32 invA = 255u - sa;
 
-        dst[i+0] = (byte)std::min(255u, sr + div255(dr * invA));
-        dst[i+1] = (byte)std::min(255u, sg + div255(dg * invA));
-        dst[i+2] = (byte)std::min(255u, sb + div255(db * invA));
-        dst[i+3] = (byte)std::min(255u, sa + div255(da * invA));
+        dst[i+0] = (byte)MIN(255u, sr + div255(dr * invA));
+        dst[i+1] = (byte)MIN(255u, sg + div255(dg * invA));
+        dst[i+2] = (byte)MIN(255u, sb + div255(db * invA));
+        dst[i+3] = (byte)MIN(255u, sa + div255(da * invA));
     }
 }
 

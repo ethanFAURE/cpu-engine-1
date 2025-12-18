@@ -100,6 +100,8 @@ using PS_FUNC							= void(*)(cpu_ps_io& data);
 #define B(rgba)							(((rgba)>>16)&0xFF)
 #define A(rgba)							(((rgba)>>24)&0xFF)
 #define JOBS(j)							{m_nextTile=0;for(size_t i=0;i<(j).size();i++)(j)[i].PostStartEvent();for(size_t i=0;i<(j).size();i++)(j)[i].WaitEndEvent();}
+#define MIN								std::min
+#define MAX								std::max
 
 // Special
 #define cpu								cpu_engine::GetInstanceRef()

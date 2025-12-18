@@ -135,7 +135,7 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 	
 	// Tile
 #ifdef CONFIG_MT
-	m_threadCount = std::max(1u, std::thread::hardware_concurrency());
+	m_threadCount = MAX(1u, std::thread::hardware_concurrency());
 #else
 	m_threadCount = 1;
 #endif
@@ -498,7 +498,7 @@ void cpu_engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XM
 	int sy = y0 < y1 ? 1 : -1;
 	int err = dx + dy;
 
-	float dist = (float)std::max(dx, abs(dy));
+	float dist = (float)MAX(dx, abs(dy));
 	if ( dist==0.0f )
 		return;
 
@@ -776,7 +776,7 @@ void cpu_engine::Render_RecalculateMatrices()
 		pEntity->aabb = pEntity->obb;
 
 		// Radius
-		float scale = std::max(pEntity->transform.sca.x, std::max(pEntity->transform.sca.y, pEntity->transform.sca.z));
+		float scale = MAX(pEntity->transform.sca.x, MAX(pEntity->transform.sca.y, pEntity->transform.sca.z));
 		pEntity->radius = pEntity->pMesh->radius *scale;
 
 		// Rectangle (screen)
@@ -864,7 +864,7 @@ void cpu_engine::Render_AssignParticleTile(int iTileForAssign)
 
 	int count = m_particleData.alive / m_tileCount;
 	int remainder = m_particleData.alive % m_tileCount;
-	int iStart = iTileForAssign * count + std::min(iTileForAssign, remainder);
+	int iStart = iTileForAssign * count + MIN(iTileForAssign, remainder);
 	int iMax = iStart + count + (iTileForAssign<remainder ? 1 : 0);
 
 	XMFLOAT4X4& vp = m_camera.matViewProj;
@@ -1141,7 +1141,7 @@ void cpu_engine::DrawEntity(cpu_entity* pEntity, cpu_tile& tile)
 
 			// Intensity
 			float ndotl = XMVectorGetX(XMVector3Dot(worldNormal, lightDir));
-			ndotl = std::max(0.0f, ndotl);
+			ndotl = MAX(0.0f, ndotl);
 			vo[i].intensity = ndotl + m_ambient;
 
 			// Screen pos
@@ -1186,10 +1186,10 @@ void cpu_engine::FillTriangle(cpu_drawcall& dc)
 	const float x2 = dc.tri[1].x, y2 = dc.tri[1].y, z2 = dc.tri[1].z;
 	const float x3 = dc.tri[2].x, y3 = dc.tri[2].y, z3 = dc.tri[2].z;
 
-	int minX = (int)floor(std::min(std::min(x1, x2), x3));
-	int maxX = (int)ceil(std::max(std::max(x1, x2), x3));
-	int minY = (int)floor(std::min(std::min(y1, y2), y3));
-	int maxY = (int)ceil(std::max(std::max(y1, y2), y3));
+	int minX = (int)floor(MIN(MIN(x1, x2), x3));
+	int maxX = (int)ceil(MAX(MAX(x1, x2), x3));
+	int minY = (int)floor(MIN(MIN(y1, y2), y3));
+	int maxY = (int)ceil(MAX(MAX(y1, y2), y3));
 
 	if ( minX<0 ) minX = 0;
 	if ( minY<0 ) minY = 0;

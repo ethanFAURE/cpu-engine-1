@@ -285,7 +285,7 @@ void cpu_particle_emitter::Update()
 			const float r_px = sqrtf(dx * dx + dy * dy);
 
 			area_px = XM_PI * r_px * r_px;
-			area_px = std::min(area_px, 0.25f*cpu.GetMainRT()->pixelCount);
+			area_px = MIN(area_px, 0.25f*cpu.GetMainRT()->pixelCount);
 		}
 	}
 	if ( area_px<=0.0f )
@@ -294,7 +294,7 @@ void cpu_particle_emitter::Update()
 	accum += density * area_px * dt;
 	int n = (int)accum;
 	accum -= (float)n;
-	//n = std::min(n, maxEmitPerFrame);
+	//n = MIN(n, maxEmitPerFrame);
 
 	while ( n-->0 && p.alive<p.maxCount )
 	{
