@@ -31,6 +31,7 @@ void cpu_rt::Create(bool useDepth)
 	cpu_rt& rt = *cpu.GetMainRT();
 	width = rt.width;
 	height = rt.height;
+	aspectRatio = rt.aspectRatio;
 	pixelCount = rt.pixelCount;
 	widthHalf = rt.widthHalf;
 	heightHalf = rt.heightHalf;

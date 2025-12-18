@@ -15,10 +15,10 @@ public:
 	static cpu_engine* GetInstance();
 	static cpu_engine& GetInstanceRef();
 
-	void Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart = 1.0f, bool hardwareBilinear = false);
+	void Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart = 1.0f, bool fullscreen = false, bool hardwareBilinear = false);
 	void Run();
+	void Quit();
 	void FixWindow();
-	void FixProjection();
 	void FixDevice();
 	HWND GetHWND() { return m_hWnd; }
 	cpu_rt* GetMainRT() { return &m_mainRT; }
@@ -154,6 +154,7 @@ private:
 	ID2D1Bitmap* m_pBitmap;
 #else
 	HDC m_hDC;
+	HBRUSH m_hBrush;
 	BITMAPINFO m_bi;
 #endif
 

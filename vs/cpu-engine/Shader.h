@@ -81,6 +81,7 @@ struct cpu_rt
 
 	int width;
 	int height;
+	float aspectRatio;
 	int pixelCount;
 	float widthHalf;
 	float heightHalf;

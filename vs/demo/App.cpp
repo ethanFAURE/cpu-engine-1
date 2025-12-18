@@ -142,6 +142,10 @@ void App::OnUpdate()
 		else
 			++it;
 	}
+
+	// Quit
+	if ( input.IsKeyDown(VK_ESCAPE) )
+		Quit();
 }
 
 void App::OnExit()

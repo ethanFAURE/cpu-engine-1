@@ -44,6 +44,7 @@ void cpu_engine::Free()
 #else
 	if ( m_hDC )
 	{
+		SelectObject(m_hDC, m_hBrush);
 		ReleaseDC(m_hWnd, m_hDC);
 		m_hDC = nullptr;
 	}
@@ -73,7 +74,7 @@ cpu_engine& cpu_engine::GetInstanceRef()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart, bool bilinear)
+void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart, bool fullscreen, bool hardwareBilinear)
 {
 	if ( m_hInstance )
 		return;
@@ -82,22 +83,31 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 	m_hInstance = hInstance;
 	m_windowWidth = (int)(renderWidth*windowScaleAtStart);
 	m_windowHeight = (int)(renderHeight*windowScaleAtStart);
-	m_bilinear = bilinear;
-	WNDCLASS wc = { 0 };
+	m_bilinear = hardwareBilinear;
+	WNDCLASS wc = { };
 	wc.lpfnWndProc = WindowProc;
 	wc.hInstance = hInstance;
 	wc.lpszClassName = "cpu-engine";
 	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 	RegisterClass(&wc);
-	RECT rect = { 0, 0, m_windowWidth, m_windowHeight };
-	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
-	m_hWnd = CreateWindow("cpu-engine", "cpu-engine", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, rect.right-rect.left, rect.bottom-rect.top, nullptr, nullptr, hInstance, nullptr);
+	if ( fullscreen )
+	{
+		RECT rect = { 0, 0, ::GetSystemMetrics(SM_CXSCREEN), ::GetSystemMetrics(SM_CYSCREEN) };
+		m_hWnd = CreateWindow("cpu-engine", "cpu-engine", WS_POPUP, 0, 0, rect.right-rect.left, rect.bottom-rect.top, nullptr, nullptr, hInstance, nullptr);
+	}
+	else
+	{
+		RECT rect = { 0, 0, m_windowWidth, m_windowHeight };
+		AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
+		m_hWnd = CreateWindow("cpu-engine", "cpu-engine", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, rect.right-rect.left, rect.bottom-rect.top, nullptr, nullptr, hInstance, nullptr);
+	}
 	SetWindowLongPtr(m_hWnd, GWLP_USERDATA, (LONG_PTR)this);
 
 	// Buffer
 	m_pRT = &m_mainRT;
 	m_mainRT.width = renderWidth;
 	m_mainRT.height = renderHeight;
+	m_mainRT.aspectRatio = float(renderWidth)/float(renderHeight);
 	m_mainRT.pixelCount = renderWidth * renderHeight;
 	m_mainRT.widthHalf = renderWidth * 0.5f;
 	m_mainRT.heightHalf = renderHeight * 0.5f;
@@ -112,6 +122,7 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 #else
 	m_hDC = GetDC(m_hWnd);
 	SetStretchBltMode(m_hDC, COLORONCOLOR);
+	m_hBrush = (HBRUSH)SelectObject(m_hDC, GetStockObject(BLACK_BRUSH));
 	m_bi.bmiHeader.biWidth = m_mainRT.width;
 	m_bi.bmiHeader.biHeight = -m_mainRT.height;
 #endif
@@ -187,8 +198,8 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 void cpu_engine::Run()
 {
 	// Camera
+	m_camera.UpdateProjection(m_mainRT.aspectRatio);
 	FixWindow();
-	FixProjection();
 
 	// Start
 	m_systime = timeGetTime();
@@ -243,6 +254,11 @@ void cpu_engine::Run()
 	OnExit();
 }
 
+void cpu_engine::Quit()
+{
+	PostQuitMessage(0);
+}
+
 void cpu_engine::FixWindow()
 {
 	RECT rc;
@@ -254,12 +270,6 @@ void cpu_engine::FixWindow()
 	if ( m_pRenderTarget )
 		m_pRenderTarget->Resize(D2D1::SizeU(m_windowWidth, m_windowHeight));
 #endif
-}
-
-void cpu_engine::FixProjection()
-{
-	const float ratio = float(m_windowWidth) / float(m_windowHeight);
-	m_camera.UpdateProjection(ratio);
 }
 
 void cpu_engine::FixDevice()
@@ -549,7 +559,6 @@ LRESULT cpu_engine::OnWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 		break;
 	case WM_SIZE:
 		FixWindow();
-		FixProjection();
 		break;
 	}
 	return DefWindowProc(hWnd, message, wParam, lParam);
@@ -1408,14 +1417,19 @@ void cpu_engine::PixelShader(cpu_ps_io& io)
 void cpu_engine::Present()
 {
 	cpu_rt& rt = *GetRT();
+	RECT fit = ComputeAspectFitRect(rt.width, rt.height, m_windowWidth, m_windowHeight);
+	int width = fit.right - fit.left;
+	int height = fit.bottom - fit.top;
 
 #ifdef CONFIG_GPU
+
 	if ( m_pRenderTarget==nullptr || m_pBitmap==nullptr )
 		return;
-	
+
 	m_pRenderTarget->BeginDraw();
-	m_pBitmap->CopyFromMemory(NULL, rt.colorBuffer.data(), rt.width * 4);
-	D2D1_RECT_F destRect = D2D1::RectF(0.0f, 0.0f, (float)m_windowWidth, (float)m_windowHeight);
+	m_pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black));
+	m_pBitmap->CopyFromMemory(nullptr, rt.colorBuffer.data(), rt.width*4);
+	D2D1_RECT_F destRect = D2D1::RectF((float)fit.left, (float)fit.top, (float)fit.right, (float)fit.bottom);	
 	if ( m_bilinear )
 		m_pRenderTarget->DrawBitmap(m_pBitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, NULL);
 	else
@@ -1429,17 +1443,24 @@ void cpu_engine::Present()
 		m_pRenderTarget = nullptr;
 		FixDevice();
 	}
+
 #else
-	if ( m_windowWidth==rt.width && m_windowHeight==rt.height )
-	{
-		// Fast
-		SetDIBitsToDevice(m_hDC, 0, 0, rt.width, rt.height, 0, 0, 0, rt.height, rt.colorBuffer.data(), &m_bi, DIB_RGB_COLORS);
-	}
+
+	if ( width==rt.width && height==rt.height )
+		SetDIBitsToDevice(m_hDC, fit.left, fit.top, rt.width, rt.height, 0, 0, 0, rt.height, rt.colorBuffer.data(), &m_bi, DIB_RGB_COLORS);
 	else
 	{
-		// Slow
-		StretchDIBits(m_hDC, 0, 0, m_windowWidth, m_windowHeight, 0, 0, rt.width, rt.height, rt.colorBuffer.data(), &m_bi, DIB_RGB_COLORS, SRCCOPY);
+		StretchDIBits(m_hDC, fit.left, fit.top, width, height, 0, 0, rt.width, rt.height, rt.colorBuffer.data(), &m_bi, DIB_RGB_COLORS, SRCCOPY);
+		if ( fit.left )
+			PatBlt(m_hDC, 0, 0, fit.left, m_windowHeight, PATCOPY);
+		if ( fit.right<m_windowWidth )
+			PatBlt(m_hDC, fit.right, 0, m_windowWidth-fit.right, m_windowHeight, PATCOPY);
+		if ( fit.top )
+			PatBlt(m_hDC, 0, 0, m_windowWidth, fit.top, PATCOPY);
+		if ( fit.bottom<m_windowHeight )
+			PatBlt(m_hDC, 0, fit.bottom, m_windowWidth, m_windowHeight-fit.bottom, PATCOPY);
 	}
+
 #endif
 }
 
