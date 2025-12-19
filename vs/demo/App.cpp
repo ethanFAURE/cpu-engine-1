@@ -49,7 +49,7 @@ void App::OnStart()
 	// YOUR CODE HERE
 
 	// Resources
-	m_font.Create(18-6);
+	m_font.Create(0.04f);
 	m_texture.Load("bird_amiga.png");
 	m_meshShip.CreateSpaceship();
 	m_meshMissile.CreateSphere(0.5f);
@@ -91,7 +91,7 @@ void App::OnStart()
 	m_pEmitter = CreateParticleEmitter();
 	m_pEmitter->density = 1000.0f;
 	m_pEmitter->colorMin = ToColor(255, 0, 0);
-	m_pEmitter->colorMax = ToColor(255, 0, 0);
+	m_pEmitter->colorMax = ToColor(255, 128, 0);
 }
 
 void App::OnUpdate()

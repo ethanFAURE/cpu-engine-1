@@ -71,16 +71,16 @@ XMFLOAT3 ToColorFromRGB(ui32 rgb)
 {
 	XMFLOAT3 color;
 	color.x = (rgb & 0xFF)/255.0f;
-	color.y = ((rgb>>16) & 0xFF)/255.0f;
-	color.z = ((rgb>>24) & 0xFF)/255.0f;
+	color.y = ((rgb>>8) & 0xFF)/255.0f;
+	color.z = ((rgb>>16) & 0xFF)/255.0f;
 	return color;
 }
 
 XMFLOAT3 ToColorFromBGR(ui32 bgr)
 {
 	XMFLOAT3 color;
-	color.x = ((bgr>>24) & 0xFF)/255.0f;
-	color.y = ((bgr>>16) & 0xFF)/255.0f;
+	color.x = ((bgr>>16) & 0xFF)/255.0f;
+	color.y = ((bgr>>8) & 0xFF)/255.0f;
 	color.z = (bgr & 0xFF)/255.0f;
 	return color;
 }

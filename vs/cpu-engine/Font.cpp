@@ -12,8 +12,9 @@ cpu_font::cpu_font()
 	height = 0;
 }
 
-bool cpu_font::Create(int fontPx, XMFLOAT3 color, const char* fontName, int cellWidth, int cellHeight, int firstChar, int lastChar)
+bool cpu_font::Create(float size, XMFLOAT3 color, const char* fontName, int cellWidth, int cellHeight, int firstChar, int lastChar)
 {
+	int fontPx = CeilToInt(size*cpu.GetMainRT()->height);
 	if ( cellHeight==-1 )
 		cellHeight = fontPx;
 	if ( cellWidth==-1 )
