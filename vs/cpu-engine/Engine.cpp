@@ -1015,6 +1015,8 @@ void cpu_engine::Update()
 
 void cpu_engine::Update_Reset()
 {
+	m_camera.transform.ResetFlags();
+
 	for ( int i=0 ; i<m_entityManager.count ; i++ )
 	{
 		cpu_entity* pEntity = m_entityManager[i];
