@@ -290,7 +290,7 @@ void cpu_particle_emitter::Update()
 			const float r_px = sqrtf(dx * dx + dy * dy);
 
 			area_px = XM_PI * r_px * r_px;
-			area_px = CPU_MIN(area_px, 0.25f*CPU.GetMainRT()->pixelCount);
+			area_px = std::min(area_px, 0.25f*CPU.GetMainRT()->pixelCount);
 		}
 	}
 	if ( area_px<=0.0f )

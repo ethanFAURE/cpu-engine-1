@@ -125,10 +125,10 @@ bool XM_CALLCONV cpu_aabb::ToScreen(cpu_rectangle& out, FXMMATRIX wvp, float ren
 		float sx = renderX + (ndcX * 0.5f + 0.5f) * renderWidth;
 		float sy = renderY + (-ndcY * 0.5f + 0.5f) * renderHeight;
 
-		minX = CPU_MIN(minX, sx);
-		minY = CPU_MIN(minY, sy);
-		maxX = CPU_MAX(maxX, sx);
-		maxY = CPU_MAX(maxY, sy);
+		minX = std::min(minX, sx);
+		minY = std::min(minY, sy);
+		maxX = std::max(maxX, sx);
+		maxY = std::max(maxY, sy);
 	}
 
 	// Outside
@@ -321,9 +321,9 @@ void cpu_mesh::CalculateBox()
 		}
 	}
 
-	float fx = CPU_MAX(fabsf(aabb.min.x), fabsf(aabb.max.x));
-	float fy = CPU_MAX(fabsf(aabb.min.y), fabsf(aabb.max.y));
-	float fz = CPU_MAX(fabsf(aabb.min.z), fabsf(aabb.max.z));
+	float fx = std::max(fabsf(aabb.min.x), fabsf(aabb.max.x));
+	float fy = std::max(fabsf(aabb.min.y), fabsf(aabb.max.y));
+	float fz = std::max(fabsf(aabb.min.z), fabsf(aabb.max.z));
 	float r2 = fx*fx + fy*fy + fz*fz;
 	radius = sqrtf(r2);
 }

@@ -25,6 +25,7 @@ public:
 	cpu_input* Input() { return &m_input; }
 	float TotalTime() { return m_totalTime; }
 	float DeltaTime() { return m_deltaTime; };
+	float Since(float t) { return m_totalTime-t; }
 	cpu_particle_data* GetParticleData() { return &m_particleData; }
 	cpu_particle_physics* GetParticlePhysics() { return &m_particlePhysics; }
 	int NextTile() { return m_nextTile.AddOne(); }

@@ -53,7 +53,7 @@ void App::OnStart()
 	// YOUR CODE HERE
 
 	// Resources
-	m_font.Create(0.04f);
+	m_font.Create();
 	m_texture.Load("bird_amiga.png");
 	m_meshShip.CreateSpaceship();
 	m_meshMissile.CreateSphere(0.5f);
@@ -98,8 +98,6 @@ void App::OnStart()
 	m_pEmitter->colorMax = cpu::ToColor(255, 128, 0);
 
 	// Camera
-	//CPU.GetCamera()->perspective = false;
-	//CPU.GetCamera()->UpdateProjection();
 	CPU.GetCamera()->transform.pos.z = -5.0f;
 }
 

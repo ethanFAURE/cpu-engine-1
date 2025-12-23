@@ -185,7 +185,7 @@ bool cpu_font::Create(float size, XMFLOAT3 color, const char* fontName, int cell
 		bgra[offset+1] = src[offset+1];
 		bgra[offset+2] = src[offset+2];
 		// conserve l'antialias (gris -> alpha partiel);
-		bgra[offset+3] = CPU_MAX({ bgra[offset+0], bgra[offset+1], bgra[offset+2] });
+		bgra[offset+3] = std::max({ bgra[offset+0], bgra[offset+1], bgra[offset+2] });
 	}
 
 	cpu_img32::Premultiply(bgra.data(), bgra.data(), width, height);

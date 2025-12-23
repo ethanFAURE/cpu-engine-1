@@ -152,7 +152,7 @@ bool cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 	
 	// Cores
 #ifdef CONFIG_MT
-	m_threadCount = CPU_MAX(1u, std::thread::hardware_concurrency());
+	m_threadCount = std::max(1u, std::thread::hardware_concurrency());
 #else
 	m_threadCount = 1;
 #endif
@@ -310,7 +310,7 @@ void cpu_engine::GetParticleRange(int& min, int& max, int iTile)
 {
 	int count = m_particleData.alive / m_tileCount;
 	int remainder = m_particleData.alive % m_tileCount;
-	min = iTile * count + CPU_MIN(iTile, remainder);
+	min = iTile * count + std::min(iTile, remainder);
 	max = min + count + (iTile<remainder ? 1 : 0);
 }
 
@@ -567,7 +567,7 @@ void cpu_engine::DrawMesh(cpu_mesh* pMesh, cpu_transform* pTransform, cpu_materi
 
 			// Intensity
 			float ndotl = XMVectorGetX(XMVector3Dot(worldNormal, lightDir));
-			ndotl = CPU_MAX(0.0f, ndotl);
+			ndotl = std::max(0.0f, ndotl);
 			vo[i].intensity = ndotl + m_ambient;
 
 			// Screen pos
@@ -920,7 +920,7 @@ void cpu_engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XM
 	int sy = y0 < y1 ? 1 : -1;
 	int err = dx + dy;
 
-	float dist = (float)CPU_MAX(dx, abs(dy));
+	float dist = (float)std::max(dx, abs(dy));
 	if ( dist==0.0f )
 		return;
 
@@ -1202,7 +1202,7 @@ void cpu_engine::Render_RecalculateMatrices()
 		pEntity->aabb = pEntity->obb;
 
 		// Radius
-		float scale = CPU_MAX(pEntity->transform.sca.x, CPU_MAX(pEntity->transform.sca.y, pEntity->transform.sca.z));
+		float scale = std::max(pEntity->transform.sca.x, std::max(pEntity->transform.sca.y, pEntity->transform.sca.z));
 		pEntity->radius = pEntity->pMesh->radius *scale;
 
 		// Rectangle (screen)
@@ -1432,10 +1432,10 @@ void cpu_engine::DrawTriangle(cpu_draw& draw)
 	const float x2 = draw.tri[1].x, y2 = draw.tri[1].y, z2 = draw.tri[1].z;
 	const float x3 = draw.tri[2].x, y3 = draw.tri[2].y, z3 = draw.tri[2].z;
 
-	int minX = (int)floor(CPU_MIN(CPU_MIN(x1, x2), x3));
-	int maxX = (int)ceil(CPU_MAX(CPU_MAX(x1, x2), x3));
-	int minY = (int)floor(CPU_MIN(CPU_MIN(y1, y2), y3));
-	int maxY = (int)ceil(CPU_MAX(CPU_MAX(y1, y2), y3));
+	int minX = (int)floor(std::min(std::min(x1, x2), x3));
+	int maxX = (int)ceil(std::max(std::max(x1, x2), x3));
+	int minY = (int)floor(std::min(std::min(y1, y2), y3));
+	int maxY = (int)ceil(std::max(std::max(y1, y2), y3));
 
 	if ( minX<0 ) minX = 0;
 	if ( minY<0 ) minY = 0;

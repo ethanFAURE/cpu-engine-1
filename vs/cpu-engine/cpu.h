@@ -104,9 +104,6 @@ using CPU_PS_FUNC						= void(*)(cpu_ps_io& data);
 #define CPU_B(rgba)						(((rgba)>>16)&0xFF)
 #define CPU_A(rgba)						(((rgba)>>24)&0xFF)
 #define CPU_JOBS(j)						{m_nextTile=0;for(size_t i=0;i<(j).size();i++)(j)[i].GetThread()->PostStartEvent(&(j)[i]);for(size_t i=0;i<(j).size();i++)(j)[i].GetThread()->WaitEndEvent();}
-#define CPU_MIN							std::min
-#define CPU_MAX							std::max
-#define CPU_SINCE(t)					(cpu_engine::GetInstance()->GetTime()-t)
 #define CPU_RUN							cpu::Run<cpu_engine, App>
 #define CPU_CALLBACK_START(method)		CPU.GetCallback()->onStart.Set(this, &App::method)
 #define CPU_CALLBACK_UPDATE(method)		CPU.GetCallback()->onUpdate.Set(this, &App::method)
