@@ -2,16 +2,16 @@
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int cmdShow)
 {
-	if ( InitializeEngine() )
+	if ( cpu::InitializeEngine() )
 	{
 		App application;
 		
 		// AMIGA
-		//application.Initialize(hInstance, 320, 200, true);		// AMIGA NTSC
-		//application.Initialize(hInstance, 320, 256, true);		// AMIGA PAL
+		//application.Initialize(hInstance, 320, 200, true, false, true);		// AMIGA NTSC
+		//application.Initialize(hInstance, 320, 256, true, false, true);		// AMIGA PAL
 
 		// RETRO
-		application.Initialize(hInstance, 512, 288, true);			// fullscreen
+		application.Initialize(hInstance, 512, 288, true, false, true);			// fullscreen
 
 		// MODERN
 		//application.Initialize(hInstance, 1024, 576);
@@ -21,6 +21,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int cmdShow)
 
 		application.Run();
 	}
-	UninitializeEngine();
+	cpu::UninitializeEngine();
 	return 0;
 }

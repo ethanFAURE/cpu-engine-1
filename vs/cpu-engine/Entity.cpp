@@ -88,8 +88,8 @@ void cpu_transform::Move(float dist)
 void cpu_transform::OrbitAroundAxis(XMFLOAT3& center, XMFLOAT3& axis, float radius, float angle)
 {
 	XMVECTOR nAxis = XMVector3Normalize(XMLoadFloat3(&axis));
-	float d = XMVectorGetX(XMVector3Dot(nAxis, XMUP));
-	XMVECTOR ref = fabsf(d)>0.99f ? XMRIGHT : XMUP;
+	float d = XMVectorGetX(XMVector3Dot(nAxis, CPU_XMUP));
+	XMVECTOR ref = fabsf(d)>0.99f ? CPU_XMRIGHT : CPU_XMUP;
 	XMVECTOR radialDir = XMVector3Normalize(XMVector3Cross(nAxis, ref));
 	XMVECTOR radial = XMVectorScale(radialDir, radius);
 	XMMATRIX r = XMMatrixRotationAxis(nAxis, angle);
@@ -160,7 +160,7 @@ void cpu_transform::LookAt(float x, float y, float z)
 	XMVECTOR vA = XMLoadFloat3(&pos);
 	XMVECTOR vB = XMVectorSet(x, y, z, 0.0f);
 	XMVECTOR vDir = XMVectorSubtract(vB, vA);
-	const XMMATRIX cam = XMMatrixTranspose(XMMatrixLookAtLH(XMVectorZero(), vDir, XMUP));
+	const XMMATRIX cam = XMMatrixTranspose(XMMatrixLookAtLH(XMVectorZero(), vDir, CPU_XMUP));
 	XMStoreFloat4x4(&rot, cam);
 
 	XMStoreFloat4(&quat, XMQuaternionNormalize(XMQuaternionRotationMatrix(cam)));
@@ -179,7 +179,7 @@ void cpu_transform::LookAt(float x, float y, float z)
 void cpu_transform::LookTo(float ndx, float ndy, float ndz)
 {
 	XMVECTOR vDir = XMVectorSet(ndx, ndy, ndz, 0.0f);
-	XMMATRIX cam = XMMatrixTranspose(XMMatrixLookToLH(XMVectorZero(), vDir, XMUP));
+	XMMATRIX cam = XMMatrixTranspose(XMMatrixLookToLH(XMVectorZero(), vDir, CPU_XMUP));
 	XMStoreFloat4x4(&rot, cam);
 
 	XMStoreFloat4(&quat, XMQuaternionNormalize(XMQuaternionRotationMatrix(cam)));

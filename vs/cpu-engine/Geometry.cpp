@@ -125,20 +125,20 @@ bool XM_CALLCONV cpu_aabb::ToScreen(cpu_rectangle& out, FXMMATRIX wvp, float ren
 		float sx = renderX + (ndcX * 0.5f + 0.5f) * renderWidth;
 		float sy = renderY + (-ndcY * 0.5f + 0.5f) * renderHeight;
 
-		minX = MIN(minX, sx);
-		minY = MIN(minY, sy);
-		maxX = MAX(maxX, sx);
-		maxY = MAX(maxY, sy);
+		minX = CPU_MIN(minX, sx);
+		minY = CPU_MIN(minY, sy);
+		maxX = CPU_MAX(maxX, sx);
+		maxY = CPU_MAX(maxY, sy);
 	}
 
 	// Outside
 	if ( minX>maxX || minY>maxY )
 		return false;
 
-	minX = Clamp(minX, renderX, renderX+renderWidth);
-	maxX = Clamp(maxX, renderX, renderX+renderWidth);
-	minY = Clamp(minY, renderY, renderY+renderHeight);
-	maxY = Clamp(maxY, renderY, renderY+renderHeight);
+	minX = cpu::Clamp(minX, renderX, renderX+renderWidth);
+	maxX = cpu::Clamp(maxX, renderX, renderX+renderWidth);
+	minY = cpu::Clamp(minY, renderY, renderY+renderHeight);
+	maxY = cpu::Clamp(maxY, renderY, renderY+renderHeight);
 	out.min = { minX, minY };
 	out.max = { maxX, maxY };
 	return true;
@@ -321,9 +321,9 @@ void cpu_mesh::CalculateBox()
 		}
 	}
 
-	float fx = MAX(fabsf(aabb.min.x), fabsf(aabb.max.x));
-	float fy = MAX(fabsf(aabb.min.y), fabsf(aabb.max.y));
-	float fz = MAX(fabsf(aabb.min.z), fabsf(aabb.max.z));
+	float fx = CPU_MAX(fabsf(aabb.min.x), fabsf(aabb.max.x));
+	float fy = CPU_MAX(fabsf(aabb.min.y), fabsf(aabb.max.y));
+	float fz = CPU_MAX(fabsf(aabb.min.z), fabsf(aabb.max.z));
 	float r2 = fx*fx + fy*fy + fz*fz;
 	radius = sqrtf(r2);
 }
@@ -412,10 +412,10 @@ void cpu_mesh::CreateSphere(float radius, int stacks, int slices, XMFLOAT3 color
 			// p01 = (theta0, phi1)
 			// p10 = (theta1, phi0)
 			// p11 = (theta1, phi1)
-			XMFLOAT3 p00 = SphericalPoint(radius, theta0, phi0);
-			XMFLOAT3 p01 = SphericalPoint(radius, theta0, phi1);
-			XMFLOAT3 p10 = SphericalPoint(radius, theta1, phi0);
-			XMFLOAT3 p11 = SphericalPoint(radius, theta1, phi1);
+			XMFLOAT3 p00 = cpu::SphericalPoint(radius, theta0, phi0);
+			XMFLOAT3 p01 = cpu::SphericalPoint(radius, theta0, phi1);
+			XMFLOAT3 p10 = cpu::SphericalPoint(radius, theta1, phi0);
+			XMFLOAT3 p11 = cpu::SphericalPoint(radius, theta1, phi1);
 			XMFLOAT3& color = k==0 ? color1 : color2;
 
 			// Triangles dégénérés (theta = 0 ou PI)
@@ -459,12 +459,12 @@ void cpu_mesh::CreateSpaceship()
 	XMFLOAT3 wLeft = { -width*0.5f, 0.0f, -1.0f };
 	XMFLOAT3 wRight = { width*0.5f, 0.0f, -1.0f };
 
-	XMFLOAT3 c1 = ToColor(208, 208, 208);
-	XMFLOAT3 c2 = ToColor(192, 192, 192);
-	XMFLOAT3 c3 = ToColor(112, 112, 112);
-	XMFLOAT3 c4 = ToColor(96, 96, 96);
-	XMFLOAT3 c5 = ToColor(255, 255, 255);
-	XMFLOAT3 c6 = ToColor(255, 255, 255);
+	XMFLOAT3 c1 = cpu::ToColor(208, 208, 208);
+	XMFLOAT3 c2 = cpu::ToColor(192, 192, 192);
+	XMFLOAT3 c3 = cpu::ToColor(112, 112, 112);
+	XMFLOAT3 c4 = cpu::ToColor(96, 96, 96);
+	XMFLOAT3 c5 = cpu::ToColor(255, 255, 255);
+	XMFLOAT3 c6 = cpu::ToColor(255, 255, 255);
 
 	AddTriangle(nose, wLeft, rTop, c1);		// Avant gauche haut
 	AddTriangle(nose, rTop, wRight, c2);	// Avant droit haut

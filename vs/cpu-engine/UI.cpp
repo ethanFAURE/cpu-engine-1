@@ -16,7 +16,7 @@ bool cpu_texture::Load(const char* path)
 	Close();
 
 	int filesize;
-	byte* data = LoadFile(path, filesize);
+	byte* data = cpu::LoadFile(path, filesize);
 	if ( data==nullptr )
 		return false;
 
@@ -44,7 +44,7 @@ bool cpu_texture::Load(const char* path)
 
 void cpu_texture::Close()
 {
-	DELPTRS(bgra);
+	CPU_DELPTRS(bgra);
 	width = 0;
 	height = 0;
 	count = 0;
@@ -96,7 +96,7 @@ cpu_font::cpu_font()
 
 bool cpu_font::Create(float size, XMFLOAT3 color, const char* fontName, int cellWidth, int cellHeight, int firstChar, int lastChar)
 {
-	int fontPx = CeilToInt(size*cpu.GetMainRT()->height);
+	int fontPx = cpu::CeilToInt(size*CPU.GetMainRT()->height);
 	if ( cellHeight==-1 )
 		cellHeight = fontPx;
 	if ( cellWidth==-1 )
@@ -154,7 +154,7 @@ bool cpu_font::Create(float size, XMFLOAT3 color, const char* fontName, int cell
 	}
 
 	HGDIOBJ oldFont = SelectObject(hdc, hFont);
-	SetTextColor(hdc, ToRGB(color)&0xFFFFFF);
+	SetTextColor(hdc, cpu::ToRGB(color)&0xFFFFFF);
 	SetBkMode(hdc, TRANSPARENT);
 	for ( int c=firstChar ; c<=lastChar ; ++c )
 	{
@@ -185,7 +185,7 @@ bool cpu_font::Create(float size, XMFLOAT3 color, const char* fontName, int cell
 		bgra[offset+1] = src[offset+1];
 		bgra[offset+2] = src[offset+2];
 		// conserve l'antialias (gris -> alpha partiel);
-		bgra[offset+3] = MAX({ bgra[offset+0], bgra[offset+1], bgra[offset+2] });
+		bgra[offset+3] = CPU_MAX({ bgra[offset+0], bgra[offset+1], bgra[offset+2] });
 	}
 
 	cpu_img32::Premultiply(bgra.data(), bgra.data(), width, height);

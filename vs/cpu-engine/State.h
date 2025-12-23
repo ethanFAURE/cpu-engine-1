@@ -106,8 +106,8 @@ void cpu_fsm<T>::Add()
 	handle.exit = &Exit<S>;
 
 	int id = (int)states.size();
-	if ( GetStateID<S>()==-1 )
-		GetStateID<S>() = id;
+	if ( CPU_ID(S)==-1 )
+		CPU_ID(S) = id;
 
 	states.push_back(handle);
 }

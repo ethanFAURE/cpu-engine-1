@@ -15,15 +15,16 @@ public:
 	static cpu_engine* GetInstance() { return s_pEngine; }
 	static cpu_engine& GetInstanceRef() { return *s_pEngine; }
 
-	void Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen = false, bool hardwareBilinear = false);
+	void Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen = false, bool hardwareBilinear = false, bool amigaStyle = false);
 	void Run();
 	void Quit();
 	void FixWindow();
 	void FixDevice();
+
 	HWND GetHWND() { return m_hWnd; }
-	cpu_input& GetInput() { return m_input; }
-	float GetTotalTime() { return m_totalTime; }
-	float GetDeltaTime() { return m_deltaTime; };
+	cpu_input* Input() { return &m_input; }
+	float TotalTime() { return m_totalTime; }
+	float DeltaTime() { return m_deltaTime; };
 	cpu_particle_data* GetParticleData() { return &m_particleData; }
 	cpu_particle_physics* GetParticlePhysics() { return &m_particlePhysics; }
 	int NextTile() { return m_nextTile.AddOne(); }
@@ -35,6 +36,7 @@ public:
 	cpu_rt* GetRT() { return m_pRT; }
 	void CopyDepth(cpu_rt* pRT);
 	void AlphaBlend(cpu_rt* pRT);
+	void ToAmigaStyle();
 	void Blur(int radius);
 	void ClearColor();
 	void ClearColor(XMFLOAT3& rgb);
@@ -103,7 +105,7 @@ private:
 	void Render_UI();
 	void Render_Cursor();
 
-	void FillTriangle(cpu_drawcall& dc);
+	void DrawTriangle(cpu_draw& draw);
 	static void PixelShader(cpu_ps_io& io);
 
 	void Present();
@@ -115,6 +117,7 @@ protected:
 	cpu_input m_input;
 
 	// Color
+	bool m_amigaStyle;
 	int m_clear;
 	XMFLOAT3 m_clearColor;
 	XMFLOAT3 m_groundColor;

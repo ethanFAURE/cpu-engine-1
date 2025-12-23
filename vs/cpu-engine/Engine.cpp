@@ -42,9 +42,9 @@ void cpu_engine::Free()
 	
 	// Surface
 #ifdef CONFIG_GPU
-	RELPTR(m_pBitmap);
-	RELPTR(m_pRenderTarget);
-	RELPTR(m_pD2DFactory);
+	CPU_RELEASE(m_pBitmap);
+	CPU_RELEASE(m_pRenderTarget);
+	CPU_RELEASE(m_pD2DFactory);
 #else
 	if ( m_hDC )
 	{
@@ -68,7 +68,7 @@ void cpu_engine::Free()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen, bool hardwareBilinear)
+void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen, bool hardwareBilinear, bool amigaStyle)
 {
 	if ( m_hInstance )
 		return;
@@ -122,10 +122,11 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 #endif
 
 	// Colors
+	m_amigaStyle = amigaStyle;
 	m_clear = CPU_CLEAR_SKY;
-	m_clearColor = ToColor(32, 32, 64);
-	m_groundColor = ToColor(32, 64, 32);
-	m_skyColor = ToColor(32, 32, 64);
+	m_clearColor = cpu::ToColor(32, 32, 64);
+	m_groundColor = cpu::ToColor(32, 64, 32);
+	m_skyColor = cpu::ToColor(32, 32, 64);
 
 	// Light
 	m_lightDir = { 0.5f, -1.0f, 0.5f };
@@ -143,13 +144,13 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 	
 	// Cores
 #ifdef CONFIG_MT
-	m_threadCount = MAX(1u, std::thread::hardware_concurrency());
+	m_threadCount = CPU_MAX(1u, std::thread::hardware_concurrency());
 #else
 	m_threadCount = 1;
 #endif
 
 	// Tiles
-	m_tileColCount = CeilToInt(sqrtf((float)m_threadCount));
+	m_tileColCount = cpu::CeilToInt(sqrtf((float)m_threadCount));
 	m_tileRowCount = (m_threadCount + m_tileColCount - 1) / m_tileColCount;
 	m_tileCount = m_tileColCount * m_tileRowCount;
 	m_statsTileCount = m_tileCount;
@@ -267,7 +268,7 @@ void cpu_engine::FixWindow()
 		GetClientRect(m_hWnd, &rc);
 		m_windowWidth = rc.right-rc.left;
 		m_windowHeight = rc.bottom-rc.top;
-		m_rcFit = ComputeAspectFitRect(m_mainRT.width, m_mainRT.height, m_windowWidth, m_windowHeight);
+		m_rcFit = cpu::ComputeAspectFitRect(m_mainRT.width, m_mainRT.height, m_windowWidth, m_windowHeight);
 	}
 
 #ifdef CONFIG_GPU
@@ -292,11 +293,15 @@ void cpu_engine::FixDevice()
 #endif
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void cpu_engine::GetParticleRange(int& min, int& max, int iTile)
 {
 	int count = m_particleData.alive / m_tileCount;
 	int remainder = m_particleData.alive % m_tileCount;
-	min = iTile * count + MIN(iTile, remainder);
+	min = iTile * count + CPU_MIN(iTile, remainder);
 	max = min + count + (iTile<remainder ? 1 : 0);
 }
 
@@ -349,6 +354,12 @@ void cpu_engine::AlphaBlend(cpu_rt* pRT)
 	cpu_img32::AlphaBlend((byte*)pRT->colorBuffer.data(), pRT->width, pRT->height, (byte*)rt.colorBuffer.data(), rt.width, rt.height, 0, 0, 0, 0, rt.width, rt.height); 
 }
 
+void cpu_engine::ToAmigaStyle()
+{
+	cpu_rt& rt = *GetRT();
+	cpu_img32::ToAmigaPalette((byte*)rt.colorBuffer.data(), rt.width, rt.height); 
+}
+
 void cpu_engine::Blur(int radius)
 {
 	if ( radius<1 )
@@ -367,7 +378,7 @@ void cpu_engine::ClearColor()
 void cpu_engine::ClearColor(XMFLOAT3& rgb)
 {
 	cpu_rt& rt = *GetRT();
-	std::fill(rt.colorBuffer.begin(), rt.colorBuffer.end(), ToBGR(rgb));
+	std::fill(rt.colorBuffer.begin(), rt.colorBuffer.end(), cpu::ToBGR(rgb));
 }
 
 void cpu_engine::ClearDepth()
@@ -380,8 +391,8 @@ void cpu_engine::ClearSky()
 {
 	cpu_rt& rt = *GetRT();
 
-	ui32 gCol = ToBGR(m_groundColor);
-	ui32 sCol = ToBGR(m_skyColor);
+	ui32 gCol = cpu::ToBGR(m_groundColor);
+	ui32 sCol = cpu::ToBGR(m_skyColor);
 
 	XMMATRIX matView = XMLoadFloat4x4(&m_camera.matView);
 	XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
@@ -456,9 +467,9 @@ void cpu_engine::ClearSky()
 			float distPx = (b * (float)y + c) * invGrad;
 			if ( fabsf(distPx)>bandPx )
 				continue;
-			float t = Clamp(0.5f + distPx * invBand);
+			float t = cpu::Clamp(0.5f + distPx * invBand);
 			t = t * t * (3.0f - 2.0f * t); // optional
-			ui32 col = LerpColor(gCol, sCol, t);
+			ui32 col = cpu::LerpColor(gCol, sCol, t);
 			ui32* row = rt.colorBuffer.data() + y * rt.width;
 			std::fill(row, row + rt.width, col);
 		}
@@ -473,8 +484,8 @@ void cpu_engine::ClearSky()
 		float xB = ( +limit - byc) / a;
 		float xMinF = (xA < xB) ? xA : xB;
 		float xMaxF = (xA > xB) ? xA : xB;
-		int x0 = FloorToInt(xMinF);
-		int x1 = CeilToInt(xMaxF);
+		int x0 = cpu::FloorToInt(xMinF);
+		int x1 = cpu::CeilToInt(xMaxF);
 		if ( x1<0 || x0>=rt.width )
 			continue;
 		if ( x0<0 )
@@ -487,9 +498,9 @@ void cpu_engine::ClearSky()
 		while ( p!=e )
 		{
 			float distPx = val * invGrad;
-			float t = Clamp(0.5f + distPx * invBand);
+			float t = cpu::Clamp(0.5f + distPx * invBand);
 			t = t * t * (3.0f - 2.0f * t); // optional
-			*p++ = LerpColor(gCol, sCol, t);
+			*p++ = cpu::LerpColor(gCol, sCol, t);
 			val += a;
 		}
 	}
@@ -504,7 +515,7 @@ void cpu_engine::DrawMesh(cpu_mesh* pMesh, cpu_transform* pTransform, cpu_materi
 	XMMATRIX matViewProj = XMLoadFloat4x4(&m_camera.matViewProj);
 	XMVECTOR lightDir = XMLoadFloat3(&m_lightDir);
 
-	cpu_drawcall dc;
+	cpu_draw draw;
 	bool safe;
 	XMFLOAT3 screen[3];
 	cpu_vertex_out vo[3];
@@ -541,13 +552,13 @@ void cpu_engine::DrawMesh(cpu_mesh* pMesh, cpu_transform* pTransform, cpu_materi
 			XMStoreFloat3(&vo[i].worldNormal, worldNormal);
 
 			// Albedo
-			vo[i].albedo.x = Clamp(in.color.x * material.color.x);
-			vo[i].albedo.y = Clamp(in.color.y * material.color.y);
-			vo[i].albedo.z = Clamp(in.color.z * material.color.z);
+			vo[i].albedo.x = cpu::Clamp(in.color.x * material.color.x);
+			vo[i].albedo.y = cpu::Clamp(in.color.y * material.color.y);
+			vo[i].albedo.z = cpu::Clamp(in.color.z * material.color.z);
 
 			// Intensity
 			float ndotl = XMVectorGetX(XMVector3Dot(worldNormal, lightDir));
-			ndotl = MAX(0.0f, ndotl);
+			ndotl = CPU_MAX(0.0f, ndotl);
 			vo[i].intensity = ndotl + m_ambient;
 
 			// Screen pos
@@ -561,7 +572,7 @@ void cpu_engine::DrawMesh(cpu_mesh* pMesh, cpu_transform* pTransform, cpu_materi
 			//}
 			screen[i].x = (ndcX + 1.0f) * rt.widthHalf;
 			screen[i].y = (1.0f - ndcY) * rt.heightHalf;
-			screen[i].z = Clamp(ndcZ);							// profondeur normalisée 0..1
+			screen[i].z = cpu::Clamp(ndcZ);							// profondeur normalisée 0..1
 		}
 		if ( safe==false )
 			continue;
@@ -573,12 +584,12 @@ void cpu_engine::DrawMesh(cpu_mesh* pMesh, cpu_transform* pTransform, cpu_materi
 			continue; // back-face or degenerated
 
 		// Pixel shader
-		dc.tri = screen;
-		dc.vo = vo;
-		dc.pMaterial = &material;
-		dc.pTile = pTile ? pTile : &m_tiles[0];
-		dc.depth = depthMode;
-		FillTriangle(dc);
+		draw.tri = screen;
+		draw.vo = vo;
+		draw.pMaterial = &material;
+		draw.pTile = pTile ? pTile : &m_tiles[0];
+		draw.depth = depthMode;
+		DrawTriangle(draw);
 
 		// Wireframe
 #ifdef CONFIG_WIREFRAME
@@ -730,7 +741,7 @@ cpu_entity* cpu_engine::HitEntity(cpu_hit& hit, cpu_ray& ray)
 			continue;
 
 		float enter, exit;
-		if ( cpu_math::RayAabb(ray, pEntity->aabb, enter, exit)==false )
+		if ( cpu::RayAabb(ray, pEntity->aabb, enter, exit)==false )
 			continue;
 
 		// Si même l'entrée dans l'AABB est déjà plus loin que le meilleur hit, skip
@@ -745,7 +756,7 @@ cpu_entity* cpu_engine::HitEntity(cpu_hit& hit, cpu_ray& ray)
 		for ( int i=0 ; i<pEntity->pMesh->triangles.size() ; i++ )
 		{
 			cpu_triangle& tri = pEntity->pMesh->triangles[i];
-			if ( cpu_math::RayTriangle(rayL, tri, ptL, &tL) )
+			if ( cpu::RayTriangle(rayL, tri, ptL, &tL) )
 			{
 				XMVECTOR pL = XMLoadFloat3(&ptL);
 				XMVECTOR pW = XMVector3TransformCoord(pL, world);
@@ -855,11 +866,11 @@ void cpu_engine::DrawSprite(cpu_sprite* pSprite)
 void cpu_engine::DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color)
 {
 	cpu_rt& rt = *GetRT();
-	COLORREF bgr = ToBGR(color);
+	COLORREF bgr = cpu::ToBGR(color);
 	if ( y<0 || y>=rt.height )
 		return;
-	x1 = Clamp(x1, 0, rt.width);
-	x2 = Clamp(x2, 0, rt.width);
+	x1 = cpu::Clamp(x1, 0, rt.width);
+	x2 = cpu::Clamp(x2, 0, rt.width);
 	ui32* buf = rt.colorBuffer.data() + y*rt.width;
 	for ( int i=x1 ; i<x2 ; i++ )
 		buf[i] = bgr;
@@ -868,11 +879,11 @@ void cpu_engine::DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color)
 void cpu_engine::DrawVertLine(int y1, int y2, int x, XMFLOAT3& color)
 {
 	cpu_rt& rt = *GetRT();
-	COLORREF bgr = ToBGR(color);
+	COLORREF bgr = cpu::ToBGR(color);
 	if ( x<0 || x>=rt.width )
 		return;
-	y1 = Clamp(y1, 0, rt.height);
-	y2 = Clamp(y2, 0, rt.height);
+	y1 = cpu::Clamp(y1, 0, rt.height);
+	y2 = cpu::Clamp(y2, 0, rt.height);
 	ui32* buf = rt.colorBuffer.data() + y1*rt.width + x;
 	for ( int i=y1 ; i<y2 ; i++ )
 	{
@@ -892,7 +903,7 @@ void cpu_engine::DrawRectangle(int x, int y, int w, int h, XMFLOAT3& color)
 void cpu_engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOAT3& color)
 {
 	cpu_rt& rt = *GetRT();
-	ui32 bgr = ToBGR(color);
+	ui32 bgr = cpu::ToBGR(color);
 
 	int dx = abs(x1 - x0);
 	int sx = x0 < x1 ? 1 : -1;
@@ -900,7 +911,7 @@ void cpu_engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XM
 	int sy = y0 < y1 ? 1 : -1;
 	int err = dx + dy;
 
-	float dist = (float)MAX(dx, abs(dy));
+	float dist = (float)CPU_MAX(dx, abs(dy));
 	if ( dist==0.0f )
 		return;
 
@@ -1067,7 +1078,7 @@ void cpu_engine::Update_Particles()
 	m_particleData.UpdateAge();
 
 	// Particles: tiles (MT)
-	JOBS(m_particlePhysicsJobs);
+	CPU_JOBS(m_particlePhysicsJobs);
 }
 
 void cpu_engine::Update_Purge()
@@ -1138,6 +1149,10 @@ void cpu_engine::Render()
 	Render_UI();
 	OnRender(CPU_PASS_CURSOR_END);
 
+	// Style
+	if ( m_amigaStyle )
+		ToAmigaStyle();
+
 	// Present
 	Present();
 }
@@ -1178,7 +1193,7 @@ void cpu_engine::Render_RecalculateMatrices()
 		pEntity->aabb = pEntity->obb;
 
 		// Radius
-		float scale = MAX(pEntity->transform.sca.x, MAX(pEntity->transform.sca.y, pEntity->transform.sca.z));
+		float scale = CPU_MAX(pEntity->transform.sca.x, CPU_MAX(pEntity->transform.sca.y, pEntity->transform.sca.z));
 		pEntity->radius = pEntity->pMesh->radius *scale;
 
 		// Rectangle (screen)
@@ -1224,10 +1239,10 @@ void cpu_engine::Render_AssignEntityTile()
 		if ( pEntity->dead || pEntity->visible==false || pEntity->pMesh==nullptr || pEntity->clipped )
 			continue;
 
-		int minX = Clamp(int(pEntity->box.min.x) / m_tileWidth, 0, m_tileColCount-1);
-		int maxX = Clamp(int(pEntity->box.max.x) / m_tileWidth, 0, m_tileColCount-1);
-		int minY = Clamp(int(pEntity->box.min.y) / m_tileHeight, 0, m_tileRowCount-1);
-		int maxY = Clamp(int(pEntity->box.max.y) / m_tileHeight, 0, m_tileRowCount-1);
+		int minX = cpu::Clamp(int(pEntity->box.min.x) / m_tileWidth, 0, m_tileColCount-1);
+		int maxX = cpu::Clamp(int(pEntity->box.max.x) / m_tileWidth, 0, m_tileColCount-1);
+		int minY = cpu::Clamp(int(pEntity->box.min.y) / m_tileHeight, 0, m_tileRowCount-1);
+		int maxY = cpu::Clamp(int(pEntity->box.max.y) / m_tileHeight, 0, m_tileRowCount-1);
 
 		pEntity->tile = 0;
 		for ( int y=minY ; y<=maxY ; y++ )
@@ -1330,17 +1345,17 @@ void cpu_engine::Render_TileParticles(int iTile)
 		float a = 1.0f - m_particleData.age[i] * m_particleData.invDuration[i];
 		a *= a;
 
-		XMFLOAT3 dst = ToColorFromBGR(rt.colorBuffer[pix]);
+		XMFLOAT3 dst = cpu::ToColorFromBGR(rt.colorBuffer[pix]);
 		float r = dst.x + m_particleData.r[i]*a;
 		float g = dst.y + m_particleData.g[i]*a;
 		float b = dst.z + m_particleData.b[i]*a;
-		rt.colorBuffer[pix] = ToBGR(r, g, b);
+		rt.colorBuffer[pix] = cpu::ToBGR(r, g, b);
 	}
 }
 
 void cpu_engine::Render_Entities()
 {
-	JOBS(m_entityJobs);
+	CPU_JOBS(m_entityJobs);
 }
 
 void cpu_engine::Render_Particles()
@@ -1349,7 +1364,7 @@ void cpu_engine::Render_Particles()
 	memset(m_particleData.tile, 0, m_particleData.alive*sizeof(ui32));
 
 	// Pre-render
-	JOBS(m_particleSpaceJobs);
+	CPU_JOBS(m_particleSpaceJobs);
 	for ( int i=0 ; i<m_tileCount ; i++ )
 	{
 		for ( int j=0 ; j<m_tileCount ; j++ )
@@ -1371,7 +1386,7 @@ void cpu_engine::Render_Particles()
 	}
 
 	// Render
-	JOBS(m_particleRenderJobs);
+	CPU_JOBS(m_particleRenderJobs);
 }
 
 void cpu_engine::Render_UI()
@@ -1400,28 +1415,28 @@ void cpu_engine::Render_Cursor()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void cpu_engine::FillTriangle(cpu_drawcall& dc)
+void cpu_engine::DrawTriangle(cpu_draw& draw)
 {
 	cpu_rt& rt = *GetRT();
 
-	const float x1 = dc.tri[0].x, y1 = dc.tri[0].y, z1 = dc.tri[0].z;
-	const float x2 = dc.tri[1].x, y2 = dc.tri[1].y, z2 = dc.tri[1].z;
-	const float x3 = dc.tri[2].x, y3 = dc.tri[2].y, z3 = dc.tri[2].z;
+	const float x1 = draw.tri[0].x, y1 = draw.tri[0].y, z1 = draw.tri[0].z;
+	const float x2 = draw.tri[1].x, y2 = draw.tri[1].y, z2 = draw.tri[1].z;
+	const float x3 = draw.tri[2].x, y3 = draw.tri[2].y, z3 = draw.tri[2].z;
 
-	int minX = (int)floor(MIN(MIN(x1, x2), x3));
-	int maxX = (int)ceil(MAX(MAX(x1, x2), x3));
-	int minY = (int)floor(MIN(MIN(y1, y2), y3));
-	int maxY = (int)ceil(MAX(MAX(y1, y2), y3));
+	int minX = (int)floor(CPU_MIN(CPU_MIN(x1, x2), x3));
+	int maxX = (int)ceil(CPU_MAX(CPU_MAX(x1, x2), x3));
+	int minY = (int)floor(CPU_MIN(CPU_MIN(y1, y2), y3));
+	int maxY = (int)ceil(CPU_MAX(CPU_MAX(y1, y2), y3));
 
 	if ( minX<0 ) minX = 0;
 	if ( minY<0 ) minY = 0;
 	if ( maxX>rt.width ) maxX = rt.width;
 	if ( maxY>rt.height ) maxY = rt.height;
 
-	if ( minX<dc.pTile->left ) minX = dc.pTile->left;
-	if ( maxX>dc.pTile->right ) maxX = dc.pTile->right;
-	if ( minY<dc.pTile->top ) minY = dc.pTile->top;
-	if ( maxY>dc.pTile->bottom ) maxY = dc.pTile->bottom;
+	if ( minX<draw.pTile->left ) minX = draw.pTile->left;
+	if ( maxX>draw.pTile->right ) maxX = draw.pTile->right;
+	if ( minY<draw.pTile->top ) minY = draw.pTile->top;
+	if ( maxY>draw.pTile->bottom ) maxY = draw.pTile->bottom;
 
 	if ( minX>=maxX || minY>=maxY )
 		return;
@@ -1453,7 +1468,7 @@ void cpu_engine::FillTriangle(cpu_drawcall& dc)
 	const float dE31dx = a31;
 	const float dE31dy = b31;
 
-	const PS_FUNC func = dc.pMaterial->ps ? dc.pMaterial->ps : &PixelShader;
+	const CPU_PS_FUNC func = draw.pMaterial->ps ? draw.pMaterial->ps : &PixelShader;
 	cpu_ps_io io;
 	for ( int y=minY ; y<maxY ; ++y )
 	{
@@ -1488,7 +1503,7 @@ void cpu_engine::FillTriangle(cpu_drawcall& dc)
 			float w3 = e12 * invArea;
 			float z = z3 + (z1 - z3) * w1 + (z2 - z3) * w2; // => z1 * w1 + z2 * w2 + z3 * w3
 			int index = y * rt.width + x;
-			if ( (dc.depth & CPU_DEPTH_READ) && z>=rt.depthBuffer[index] )
+			if ( (draw.depth & CPU_DEPTH_READ) && z>=rt.depthBuffer[index] )
 			{
 				e12 += dE12dx;
 				e23 += dE23dx;
@@ -1502,29 +1517,29 @@ void cpu_engine::FillTriangle(cpu_drawcall& dc)
 			io.p.depth = z;
 
 			// Position (lerp)
-			io.p.pos.x = dc.vo[2].worldPos.x + (dc.vo[0].worldPos.x - dc.vo[2].worldPos.x) * w1 + (dc.vo[1].worldPos.x - dc.vo[2].worldPos.x) * w2;
-			io.p.pos.y = dc.vo[2].worldPos.y + (dc.vo[0].worldPos.y - dc.vo[2].worldPos.y) * w1 + (dc.vo[1].worldPos.y - dc.vo[2].worldPos.y) * w2;
-			io.p.pos.z = dc.vo[2].worldPos.z + (dc.vo[0].worldPos.z - dc.vo[2].worldPos.z) * w1 + (dc.vo[1].worldPos.z - dc.vo[2].worldPos.z) * w2;
+			io.p.pos.x = draw.vo[2].worldPos.x + (draw.vo[0].worldPos.x - draw.vo[2].worldPos.x) * w1 + (draw.vo[1].worldPos.x - draw.vo[2].worldPos.x) * w2;
+			io.p.pos.y = draw.vo[2].worldPos.y + (draw.vo[0].worldPos.y - draw.vo[2].worldPos.y) * w1 + (draw.vo[1].worldPos.y - draw.vo[2].worldPos.y) * w2;
+			io.p.pos.z = draw.vo[2].worldPos.z + (draw.vo[0].worldPos.z - draw.vo[2].worldPos.z) * w1 + (draw.vo[1].worldPos.z - draw.vo[2].worldPos.z) * w2;
 
 			// Normal (lerp)
-			io.p.normal.x = dc.vo[2].worldNormal.x + (dc.vo[0].worldNormal.x - dc.vo[2].worldNormal.x) * w1 + (dc.vo[1].worldNormal.x - dc.vo[2].worldNormal.x) * w2;
-			io.p.normal.y = dc.vo[2].worldNormal.y + (dc.vo[0].worldNormal.y - dc.vo[2].worldNormal.y) * w1 + (dc.vo[1].worldNormal.y - dc.vo[2].worldNormal.y) * w2;
-			io.p.normal.z = dc.vo[2].worldNormal.z + (dc.vo[0].worldNormal.z - dc.vo[2].worldNormal.z) * w1 + (dc.vo[1].worldNormal.z - dc.vo[2].worldNormal.z) * w2;
+			io.p.normal.x = draw.vo[2].worldNormal.x + (draw.vo[0].worldNormal.x - draw.vo[2].worldNormal.x) * w1 + (draw.vo[1].worldNormal.x - draw.vo[2].worldNormal.x) * w2;
+			io.p.normal.y = draw.vo[2].worldNormal.y + (draw.vo[0].worldNormal.y - draw.vo[2].worldNormal.y) * w1 + (draw.vo[1].worldNormal.y - draw.vo[2].worldNormal.y) * w2;
+			io.p.normal.z = draw.vo[2].worldNormal.z + (draw.vo[0].worldNormal.z - draw.vo[2].worldNormal.z) * w1 + (draw.vo[1].worldNormal.z - draw.vo[2].worldNormal.z) * w2;
 
 			// Color (lerp)
-			io.p.albedo.x = dc.vo[2].albedo.x + (dc.vo[0].albedo.x - dc.vo[2].albedo.x) * w1 + (dc.vo[1].albedo.x - dc.vo[2].albedo.x) * w2;
-			io.p.albedo.y = dc.vo[2].albedo.y + (dc.vo[0].albedo.y - dc.vo[2].albedo.y) * w1 + (dc.vo[1].albedo.y - dc.vo[2].albedo.y) * w2;
-			io.p.albedo.z = dc.vo[2].albedo.z + (dc.vo[0].albedo.z - dc.vo[2].albedo.z) * w1 + (dc.vo[1].albedo.z - dc.vo[2].albedo.z) * w2;
+			io.p.albedo.x = draw.vo[2].albedo.x + (draw.vo[0].albedo.x - draw.vo[2].albedo.x) * w1 + (draw.vo[1].albedo.x - draw.vo[2].albedo.x) * w2;
+			io.p.albedo.y = draw.vo[2].albedo.y + (draw.vo[0].albedo.y - draw.vo[2].albedo.y) * w1 + (draw.vo[1].albedo.y - draw.vo[2].albedo.y) * w2;
+			io.p.albedo.z = draw.vo[2].albedo.z + (draw.vo[0].albedo.z - draw.vo[2].albedo.z) * w1 + (draw.vo[1].albedo.z - draw.vo[2].albedo.z) * w2;
 
 			// Lighting
-			if ( dc.pMaterial->lighting==CPU_LIGHTING_GOURAUD )
+			if ( draw.pMaterial->lighting==CPU_LIGHTING_GOURAUD )
 			{
-				float intensity = dc.vo[2].intensity + (dc.vo[0].intensity - dc.vo[2].intensity) * w1 + (dc.vo[1].intensity - dc.vo[2].intensity) * w2;
+				float intensity = draw.vo[2].intensity + (draw.vo[0].intensity - draw.vo[2].intensity) * w1 + (draw.vo[1].intensity - draw.vo[2].intensity) * w2;
 				io.p.color.x = io.p.albedo.x * intensity;
 				io.p.color.y = io.p.albedo.y * intensity;
 				io.p.color.z = io.p.albedo.z * intensity;
 			}
-			else if ( dc.pMaterial->lighting==CPU_LIGHTING_LAMBERT )
+			else if ( draw.pMaterial->lighting==CPU_LIGHTING_LAMBERT )
 			{
 				XMVECTOR n = XMLoadFloat3(&io.p.normal);				
 				//n = XMVector3Normalize(n); // Expensive (better results)
@@ -1541,15 +1556,15 @@ void cpu_engine::FillTriangle(cpu_drawcall& dc)
 				io.p.color = io.p.albedo;
 
 			// Output
-			io.values = dc.pMaterial->values;
+			io.values = draw.pMaterial->values;
 			io.color = {};
 			io.discard = false;
 			func(io);
 			if ( io.discard==false )
 			{
-				if ( dc.depth & CPU_DEPTH_WRITE )
+				if ( draw.depth & CPU_DEPTH_WRITE )
 					rt.depthBuffer[index] = z;
-				rt.colorBuffer[index] = ToBGR(io.color);
+				rt.colorBuffer[index] = cpu::ToBGR(io.color);
 			}
 
 			e12 += dE12dx;
@@ -1563,7 +1578,7 @@ void cpu_engine::FillTriangle(cpu_drawcall& dc)
 	}
 
 	// Stats
-	dc.pTile->statsDrawnTriangleCount++;
+	draw.pTile->statsDrawnTriangleCount++;
 }
 
 void cpu_engine::PixelShader(cpu_ps_io& io)

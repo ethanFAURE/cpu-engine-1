@@ -3,14 +3,6 @@
 namespace cpu_img32
 {
 
-alignas(16) static const unsigned char DITHER_2X2_BGRA[16] =
-{
-	0,  0,  0,  0,
-	8,  8,  8,  0,
-	12,12,12,0,
-	4,  4,  4,  0
-};
-
 void Free();
 
 // Premultiplied alpha SRC-over DST blit with clipping.
@@ -99,6 +91,6 @@ bool AlphaBlendStraightOverOpaque(const byte* src, int srcW, int srcH, byte* dst
 
 void Blur(byte* img, int width, int height, int radius);
 
-void ToAmigaPalette(byte* buffer, int pixelCount);
+void ToAmigaPalette(byte* buffer, int width, int height);
 
 }

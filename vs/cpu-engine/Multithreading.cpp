@@ -71,7 +71,7 @@ void cpu_thread_job::OnCallback()
 		m_isWorking = true;
 		while ( true )
 		{
-			int index = cpu.NextTile();
+			int index = CPU.NextTile();
 			if ( index>=m_count )
 				break;
 
@@ -95,22 +95,22 @@ void cpu_job::Create(cpu_thread_job* pThread)
 
 void cpu_job_entity::OnJob(int iTile)
 {
-	cpu.Render_TileEntities(iTile);
+	CPU.Render_TileEntities(iTile);
 }
 
 void cpu_job_particle_physics::OnJob(int iTile)
 {
 	int min, max;
-	cpu.GetParticleRange(min, max, iTile);
-	cpu.GetParticleData()->UpdatePhysics(min, max);
+	CPU.GetParticleRange(min, max, iTile);
+	CPU.GetParticleData()->UpdatePhysics(min, max);
 }
 
 void cpu_job_particle_space::OnJob(int iTile)
 {
-	cpu.Render_AssignParticleTile(iTile);
+	CPU.Render_AssignParticleTile(iTile);
 }
 
 void cpu_job_particle_render::OnJob(int iTile)
 {
-	cpu.Render_TileParticles(iTile);
+	CPU.Render_TileParticles(iTile);
 }

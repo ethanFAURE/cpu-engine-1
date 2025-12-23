@@ -113,7 +113,7 @@ void cpu_particle_data::UpdateAge()
 	if ( alive<=0 )
 		return;
 
-	const float dt = dtime;
+	const float dt = CPU.DeltaTime();
 	int i = 0;
 	while ( i<alive )
 	{
@@ -143,8 +143,8 @@ void cpu_particle_data::UpdateAge()
 
 void cpu_particle_data::UpdatePhysics(int min, int max)
 {
-	const float dt = dtime;
-	cpu_particle_physics& phys = *cpu.GetParticlePhysics();
+	const float dt = CPU.DeltaTime();
+	cpu_particle_physics& phys = *CPU.GetParticlePhysics();
 	const float drag = phys.drag>0.0f ? phys.drag : 0.0f;
 	const float dragFactor = drag>0.0f ? 1.0f/(1.0f+drag*dt) : 1.0f;
 	const float maxSpeed = phys.maxSpeed;
@@ -251,11 +251,11 @@ cpu_particle_emitter::cpu_particle_emitter()
 
 void cpu_particle_emitter::Update()
 {
-	float dt = dtime;
-	cpu_particle_data& p = *cpu.GetParticleData();
+	float dt = CPU.DeltaTime();
+	cpu_particle_data& p = *CPU.GetParticleData();
 
 	XMVECTOR c = XMVectorSet(pos.x, pos.y, pos.z, 1.0f);
-	XMVECTOR cClip = XMVector4Transform(c, XMLoadFloat4x4(&cpu.GetCamera()->matViewProj));
+	XMVECTOR cClip = XMVector4Transform(c, XMLoadFloat4x4(&CPU.GetCamera()->matViewProj));
 	XMFLOAT4 c4; 
 	XMStoreFloat4(&c4, cClip);
 
@@ -267,7 +267,7 @@ void cpu_particle_emitter::Update()
 		const float ndcCy = c4.y * invWc;
 
 		XMVECTOR r = XMVectorSet(pos.x+spawnRadius, pos.y, pos.z, 1.0f);
-		XMVECTOR rClip = XMVector4Transform(r, XMLoadFloat4x4(&cpu.GetCamera()->matViewProj));
+		XMVECTOR rClip = XMVector4Transform(r, XMLoadFloat4x4(&CPU.GetCamera()->matViewProj));
 		XMFLOAT4 r4; XMStoreFloat4(&r4, rClip);
 		if ( r4.w>1e-6f )
 		{
@@ -275,8 +275,8 @@ void cpu_particle_emitter::Update()
 			const float ndcRx = r4.x * invWr;
 			const float ndcRy = r4.y * invWr;
 
-			const float halfW = cpu.GetMainRT()->widthHalf;
-			const float halfH = cpu.GetMainRT()->heightHalf;
+			const float halfW = CPU.GetMainRT()->widthHalf;
+			const float halfH = CPU.GetMainRT()->heightHalf;
 
 			const float pxC = (ndcCx + 1.0f) * halfW;
 			const float pyC = (1.0f - ndcCy) * halfH;
@@ -290,7 +290,7 @@ void cpu_particle_emitter::Update()
 			const float r_px = sqrtf(dx * dx + dy * dy);
 
 			area_px = XM_PI * r_px * r_px;
-			area_px = MIN(area_px, 0.25f*cpu.GetMainRT()->pixelCount);
+			area_px = CPU_MIN(area_px, 0.25f*CPU.GetMainRT()->pixelCount);
 		}
 	}
 	if ( area_px<=0.0f )
@@ -307,23 +307,23 @@ void cpu_particle_emitter::Update()
 
 		ui32 seed = (ui32)(i * 9781u + 0x9E3779B9u);
 
-		p.px[i] = pos.x + RandSigned(seed) * spawnRadius;
-		p.py[i] = pos.y + RandSigned(seed) * spawnRadius;
-		p.pz[i] = pos.z + RandSigned(seed) * spawnRadius;
+		p.px[i] = pos.x + cpu::RandSigned(seed) * spawnRadius;
+		p.py[i] = pos.y + cpu::RandSigned(seed) * spawnRadius;
+		p.pz[i] = pos.z + cpu::RandSigned(seed) * spawnRadius;
 
-		float speed = speedMin + (speedMax - speedMin) * Rand01(seed);
-		p.vx[i] = (dir.x + RandSigned(seed)*spread) * speed;
-		p.vy[i] = (dir.y + RandSigned(seed)*spread) * speed;
-		p.vz[i] = (dir.z + RandSigned(seed)*spread) * speed;
+		float speed = speedMin + (speedMax - speedMin) * cpu::Rand01(seed);
+		p.vx[i] = (dir.x + cpu::RandSigned(seed)*spread) * speed;
+		p.vy[i] = (dir.y + cpu::RandSigned(seed)*spread) * speed;
+		p.vz[i] = (dir.z + cpu::RandSigned(seed)*spread) * speed;
 
 		p.age[i] = 0.0f;
 
-		float rand = Rand01(seed);
+		float rand = cpu::Rand01(seed);
 		p.duration[i] = durationMin + (durationMax - durationMin) * rand;
 		p.invDuration[i] = 1.0f / p.duration[i];
 
-		float t = Rand01(seed);
-		float intensity = 0.8f + 0.2f * Rand01(seed);
+		float t = cpu::Rand01(seed);
+		float intensity = 0.8f + 0.2f * cpu::Rand01(seed);
 		p.r[i] = std::lerp(colorMin.x, colorMax.x, t) * intensity;
 		p.g[i] = std::lerp(colorMin.y, colorMax.y, t) * intensity;
 		p.b[i] = std::lerp(colorMin.z, colorMax.z, t) * intensity;

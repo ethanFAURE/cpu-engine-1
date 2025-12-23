@@ -33,7 +33,6 @@
 	#include <crtdbg.h>
 #endif
 
-
 // Config
 ///////////
 
@@ -49,9 +48,9 @@
 
 #include <DirectXMath.h>
 using namespace DirectX;
-inline XMVECTOR XMRIGHT					= g_XMIdentityR0;
-inline XMVECTOR XMUP					= g_XMIdentityR1;
-inline XMVECTOR XMDIR					= g_XMIdentityR2;
+inline XMVECTOR CPU_XMRIGHT					= g_XMIdentityR0;
+inline XMVECTOR CPU_XMUP					= g_XMIdentityR1;
+inline XMVECTOR CPU_XMDIR					= g_XMIdentityR2;
 
 // Engine
 ///////////
@@ -69,6 +68,8 @@ struct cpu_camera;
 struct cpu_obb;
 struct cpu_ps_io;
 struct cpu_tile;
+struct cpu_triangle;
+struct cpu_ray;
 class cpu_engine;
 class cpu_job;
 
@@ -79,7 +80,7 @@ using i32								= __int32;
 using ui32								= unsigned __int32;
 using i64								= __int64;
 using ui64								= unsigned __int64;
-using PS_FUNC							= void(*)(cpu_ps_io& data);
+using CPU_PS_FUNC						= void(*)(cpu_ps_io& data);
 
 // Memory
 #ifdef _DEBUG
@@ -88,29 +89,23 @@ using PS_FUNC							= void(*)(cpu_ps_io& data);
 #endif
 
 // Macro
-#define RELPTR(p)						{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
-#define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
-#define DELPTRS(p)						{ if ( (p) ) { delete [] (p); (p) = nullptr; } }
-#define STR(v)							std::to_string(v)
-#define CAPTION(v)						SetWindowText(cpu.GetHWND(), STR(v).c_str());
-#define ID(s)							GetStateID<s>()
-#define RGBX(r,g,b)						((ui32)(((byte)(r)|((ui16)((byte)(g))<<8))|(((ui16)(byte)(b))<<16))|0xFF000000)
-#define RGBA(r,g,b,a)					((ui32)(((byte)(r)|((ui16)((byte)(g))<<8))|(((ui16)(byte)(b))<<16))|(((ui32)(byte)(a))<<24))
-#define R(rgba)							((rgba)&0xFF)
-#define G(rgba)							(((rgba)>>8)&0xFF)
-#define B(rgba)							(((rgba)>>16)&0xFF)
-#define A(rgba)							(((rgba)>>24)&0xFF)
-#define JOBS(j)							{m_nextTile=0;for(size_t i=0;i<(j).size();i++)(j)[i].GetThread()->PostStartEvent(&(j)[i]);for(size_t i=0;i<(j).size();i++)(j)[i].GetThread()->WaitEndEvent();}
-#define MIN								std::min
-#define MAX								std::max
-
-// Special
-#define app								App::GetInstanceRef()
-#define cpu								cpu_engine::GetInstanceRef()
-#define input							cpu_engine::GetInstance()->GetInput()
-#define dtime							cpu_engine::GetInstance()->GetDeltaTime()
-#define ttime							cpu_engine::GetInstance()->GetTotalTime()
-#define since(t)						(cpu_engine::GetInstance()->GetTime()-t)
+#define CPU_RELEASE(p)					{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
+#define CPU_DELPTR(p)					{ if ( (p) ) { delete (p); (p) = nullptr; } }
+#define CPU_DELPTRS(p)					{ if ( (p) ) { delete [] (p); (p) = nullptr; } }
+#define CPU_STR(v)						std::to_string(v)
+#define CPU_CAPTION(v)					SetWindowText(cpu.GetHWND(), STR(v).c_str());
+#define CPU_ID(s)						cpu::GetStateID<s>()
+#define CPU_RGBX(r,g,b)					((ui32)(((byte)(r)|((ui16)((byte)(g))<<8))|(((ui16)(byte)(b))<<16))|0xFF000000)
+#define CPU_RGBA(r,g,b,a)				((ui32)(((byte)(r)|((ui16)((byte)(g))<<8))|(((ui16)(byte)(b))<<16))|(((ui32)(byte)(a))<<24))
+#define CPU_R(rgba)						((rgba)&0xFF)
+#define CPU_G(rgba)						(((rgba)>>8)&0xFF)
+#define CPU_B(rgba)						(((rgba)>>16)&0xFF)
+#define CPU_A(rgba)						(((rgba)>>24)&0xFF)
+#define CPU_JOBS(j)						{m_nextTile=0;for(size_t i=0;i<(j).size();i++)(j)[i].GetThread()->PostStartEvent(&(j)[i]);for(size_t i=0;i<(j).size();i++)(j)[i].GetThread()->WaitEndEvent();}
+#define CPU_MIN							std::min
+#define CPU_MAX							std::max
+#define CPU_SINCE(t)					(cpu_engine::GetInstance()->GetTime()-t)
+#define CPU								cpu_engine::GetInstanceRef()
 
 // Float3
 inline XMFLOAT3 CPU_RIGHT				= { 1.0f, 0.0f, 0.0f };
@@ -171,7 +166,6 @@ inline XMFLOAT3 CPU_ORANGE				= { 1.0f, 0.5f, 0.0f };
 #include "UI.h"
 #include "Particle.h"
 #include "Geometry.h"
-#include "Math.h"
 #include "Shader.h"
 #include "Entity.h"
 #include "Multithreading.h"

@@ -8,8 +8,8 @@ std::vector<int>* g_pBlurDv = nullptr;
 
 void Free()
 {
-	DELPTR(g_pBlurScratch);
-	DELPTR(g_pBlurDv);
+	CPU_DELPTR(g_pBlurScratch);
+	CPU_DELPTR(g_pBlurDv);
 }
 
 void AlphaBlend(
@@ -690,7 +690,7 @@ void Blur(byte* img, int width, int height, int radius)
 		// init stack with left edge clamped
 		for (int i = -radius; i <= radius; ++i)
 		{
-			const int x = Clamp(i, 0, width - 1);
+			const int x = cpu::Clamp(i, 0, width - 1);
 			const byte* p = srcRow + x * 4;
 
 			P& s = stack[(size_t)(i + radius)];
@@ -723,7 +723,7 @@ void Blur(byte* img, int width, int height, int radius)
 			outB -= out.b; outG -= out.g; outR -= out.r; outA -= out.a;
 
 			// add incoming (write into outgoing slot)
-			const int xIn = Clamp(x + radius + 1, 0, width - 1);
+			const int xIn = cpu::Clamp(x + radius + 1, 0, width - 1);
 			const byte* pIn = srcRow + xIn * 4;
 
 			out.b = pIn[0]; out.g = pIn[1]; out.r = pIn[2]; out.a = pIn[3];
@@ -752,7 +752,7 @@ void Blur(byte* img, int width, int height, int radius)
 		// init stack with top edge clamped
 		for (int i = -radius; i <= radius; ++i)
 		{
-			const int y = Clamp(i, 0, height - 1);
+			const int y = cpu::Clamp(i, 0, height - 1);
 			const byte* p = tmp + y * stride + x * 4;
 
 			P& s = stack[(size_t)(i + radius)];
@@ -783,7 +783,7 @@ void Blur(byte* img, int width, int height, int radius)
 
 			outB -= out.b; outG -= out.g; outR -= out.r; outA -= out.a;
 
-			const int yIn = Clamp(y + radius + 1, 0, height - 1);
+			const int yIn = cpu::Clamp(y + radius + 1, 0, height - 1);
 			const byte* pIn = tmp + yIn * stride + x * 4;
 
 			out.b = pIn[0]; out.g = pIn[1]; out.r = pIn[2]; out.a = pIn[3];
@@ -800,71 +800,112 @@ void Blur(byte* img, int width, int height, int radius)
 	}
 }
 
-void ToAmigaPalette(byte* buffer, int pixelCount)
+void ToAmigaPalette(byte* buffer, int width, int height)
 {
-	const int simdPixels = pixelCount & ~3; // multiple de 4
-	unsigned char* p = buffer;
+    if (!buffer || width <= 0 || height <= 0) return;
 
-	const __m128i mask_alpha = _mm_set1_epi32(0xFF000000);
-	const __m128i mask_rgb   = _mm_set1_epi32(0x00FFFFFF);
+    // Dithers préfabriqués pour 4 pixels (16 bytes BGRA BGRA BGRA BGRA)
+    // dd appliqué à B,G,R ; A reste 0.
+    alignas(16) static const unsigned char D_EVENY_XEVEN[16] = {
+        0,0,0,0,   8,8,8,0,   0,0,0,0,   8,8,8,0
+    };
+    alignas(16) static const unsigned char D_EVENY_XODD[16] = {
+        8,8,8,0,   0,0,0,0,   8,8,8,0,   0,0,0,0
+    };
+    alignas(16) static const unsigned char D_ODDY_XEVEN[16] = {
+        12,12,12,0,  4,4,4,0,  12,12,12,0,  4,4,4,0
+    };
+    alignas(16) static const unsigned char D_ODDY_XODD[16] = {
+        4,4,4,0,   12,12,12,0,  4,4,4,0,   12,12,12,0
+    };
 
-	const __m128i dither = _mm_load_si128(
-		reinterpret_cast<const __m128i*>(DITHER_2X2_BGRA)
-	);
+    const __m128i mask_alpha = _mm_set1_epi32(0xFF000000);
+    const __m128i mask_rgb   = _mm_set1_epi32(0x00FFFFFF);
+    const __m128i zero       = _mm_setzero_si128();
 
-	for (int i = 0; i < simdPixels; i += 4)
-	{
-		// Load 4 pixels BGRA
-		__m128i px = _mm_loadu_si128(reinterpret_cast<const __m128i*>(p));
+    const __m128i d_even_xeven = _mm_load_si128(reinterpret_cast<const __m128i*>(D_EVENY_XEVEN));
+    const __m128i d_even_xodd  = _mm_load_si128(reinterpret_cast<const __m128i*>(D_EVENY_XODD));
+    const __m128i d_odd_xeven  = _mm_load_si128(reinterpret_cast<const __m128i*>(D_ODDY_XEVEN));
+    const __m128i d_odd_xodd   = _mm_load_si128(reinterpret_cast<const __m128i*>(D_ODDY_XODD));
 
-		// Extract alpha
-		__m128i alpha = _mm_and_si128(px, mask_alpha);
+    const int strideBytes = width * 4;
 
-		// Add dithering (BGR only)
-		__m128i rgb = _mm_and_si128(px, mask_rgb);
-		rgb = _mm_adds_epu8(rgb, dither);
+    for (int y = 0; y < height; ++y)
+    {
+        unsigned char* row = buffer + y * strideBytes;
 
-		// 8 bits ? 4 bits
-		__m128i rgb4 = _mm_srli_epi16(rgb, 4);
+        // Choix des deux motifs selon la parité de y
+        const bool yOdd = (y & 1) != 0;
+        const __m128i d_xeven = yOdd ? d_odd_xeven : d_even_xeven;
+        const __m128i d_xodd  = yOdd ? d_odd_xodd  : d_even_xodd;
 
-		// Expand 4 bits ? 8 bits (replication)
-		__m128i rgb8 = _mm_or_si128(
-			_mm_slli_epi16(rgb4, 4),
-			rgb4
-		);
+        int x = 0;
 
-		// Recombine with alpha
-		__m128i out = _mm_or_si128(
-			_mm_and_si128(rgb8, mask_rgb),
-			alpha
-		);
+        // SIMD par blocs de 4 pixels
+        const int simdWidth = width & ~3; // multiple de 4
+        for (; x < simdWidth; x += 4)
+        {
+            unsigned char* p = row + x * 4;
 
-		_mm_storeu_si128(reinterpret_cast<__m128i*>(p), out);
-		p += 16;
-	}
+            __m128i px = _mm_loadu_si128(reinterpret_cast<const __m128i*>(p));
 
-	// Reste scalaire (0–3 pixels)
-	for (int i = simdPixels; i < pixelCount; ++i)
-	{
-		unsigned char* q = buffer + i * 4;
+            // Extraire alpha
+            __m128i alpha = _mm_and_si128(px, mask_alpha);
 
-		unsigned char b = q[0];
-		unsigned char g = q[1];
-		unsigned char r = q[2];
+            // Dither correct selon parité de x (début de bloc)
+            const __m128i d = (x & 1) ? d_xodd : d_xeven;
 
-		static const unsigned char d[4] = { 0, 8, 12, 4 };
-		unsigned char dd = d[i & 3];
+            // Ajouter dithering uniquement sur RGB
+            __m128i rgb = _mm_and_si128(px, mask_rgb);
+            rgb = _mm_adds_epu8(rgb, d);
 
-		b = (b + dd) >> 4;
-		g = (g + dd) >> 4;
-		r = (r + dd) >> 4;
+            // Quantification 8->4->8 SANS mélange de canaux :
+            // unpack bytes->u16, shift, replicate, pack
+            __m128i lo = _mm_unpacklo_epi8(rgb, zero);
+            __m128i hi = _mm_unpackhi_epi8(rgb, zero);
 
-		q[0] = (b << 4) | b;
-		q[1] = (g << 4) | g;
-		q[2] = (r << 4) | r;
-		// alpha inchangé
-	}
+            lo = _mm_srli_epi16(lo, 4);
+            hi = _mm_srli_epi16(hi, 4);
+
+            lo = _mm_or_si128(_mm_slli_epi16(lo, 4), lo);
+            hi = _mm_or_si128(_mm_slli_epi16(hi, 4), hi);
+
+            __m128i rgb8 = _mm_packus_epi16(lo, hi);
+
+            // Recombiner avec alpha original
+            __m128i out = _mm_or_si128(_mm_and_si128(rgb8, mask_rgb), alpha);
+
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(p), out);
+        }
+
+        // Reste scalaire (0..3 pixels) en fin de ligne
+        for (; x < width; ++x)
+        {
+            unsigned char* q = row + x * 4;
+
+            unsigned char b = q[0];
+            unsigned char g = q[1];
+            unsigned char r = q[2];
+
+            // vrai 2x2 : index = (x&1) + 2*(y&1)
+            static const unsigned char d2x2[4] = { 0, 8, 12, 4 };
+            unsigned char dd = d2x2[(x & 1) | ((y & 1) << 1)];
+
+            // (optionnel) saturer à 255 avant >>4 pour coller à _mm_adds_epu8
+            int bi = b + dd; if (bi > 255) bi = 255;
+            int gi = g + dd; if (gi > 255) gi = 255;
+            int ri = r + dd; if (ri > 255) ri = 255;
+
+            unsigned char b4 = (unsigned char)(bi >> 4);
+            unsigned char g4 = (unsigned char)(gi >> 4);
+            unsigned char r4 = (unsigned char)(ri >> 4);
+
+            q[0] = (b4 << 4) | b4;
+            q[1] = (g4 << 4) | g4;
+            q[2] = (r4 << 4) | r4;
+            // alpha inchangé
+        }
+    }
 }
-
 
 }

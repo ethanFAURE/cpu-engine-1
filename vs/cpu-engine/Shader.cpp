@@ -28,7 +28,7 @@ cpu_rt::cpu_rt()
 
 void cpu_rt::Create(bool useDepth)
 {
-	cpu_rt& rt = *cpu.GetMainRT();
+	cpu_rt& rt = *CPU.GetMainRT();
 	width = rt.width;
 	height = rt.height;
 	aspectRatio = rt.aspectRatio;
