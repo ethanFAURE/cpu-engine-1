@@ -7,7 +7,7 @@
 #endif
 
 #include <SDKDDKVer.h>
-#include "../cpu-engine/cpu.h"
+#include "../cpu-engine/cpu-engine.h"
 
 class Ship;
 

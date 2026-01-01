@@ -21,7 +21,7 @@ App::~App()
 
 void App::SpawnMissile()
 {
-	cpu_entity* pMissile = CPU.CreateEntity();
+	cpu_entity* pMissile = cpuEngine.CreateEntity();
 	pMissile->pMesh = &m_meshMissile;
 	pMissile->transform.SetScaling(0.2f);
 	pMissile->transform.pos = m_pShip->GetEntity()->transform.pos;
@@ -33,8 +33,8 @@ void App::SpawnMissile()
 void App::SpawnMissileWithMouse()
 {
 	cpu_ray ray;
-	CPU.GetCursorRay(ray);
-	cpu_entity* pMissile = CPU.CreateEntity();
+	cpuEngine.GetCursorRay(ray);
+	cpu_entity* pMissile = cpuEngine.CreateEntity();
 	pMissile->pMesh = &m_meshMissile;
 	pMissile->transform.SetScaling(0.2f);
 	pMissile->transform.pos = ray.pos;
@@ -53,15 +53,15 @@ void App::OnStart()
 	// YOUR CODE HERE
 
 	// Resources
-	m_font.Create();
+	m_font.Create(10);
 	m_texture.Load("bird_amiga.png");
 	m_meshShip.CreateSpaceship();
 	m_meshMissile.CreateSphere(0.5f);
 	m_meshSphere.CreateSphere(2.0f, 12, 12, cpu::ToColor(224, 224, 224));
-	m_rts[0] = CPU.CreateRT();
+	m_rts[0] = cpuEngine.CreateRT();
 
 	// UI
-	m_pSprite = CPU.CreateSprite();
+	m_pSprite = cpuEngine.CreateSprite();
 	m_pSprite->pTexture = &m_texture;
 	m_pSprite->CenterAnchor();
 	m_pSprite->x = 40;
@@ -74,12 +74,12 @@ void App::OnStart()
 
 	// 3D
 	m_missileSpeed = 10.0f;
-	m_pBall = CPU.CreateEntity();
+	m_pBall = cpuEngine.CreateEntity();
 	m_pBall->pMesh = &m_meshSphere;
 	m_pBall->transform.pos.x = 3.0f;
 	m_pBall->transform.pos.y = 3.0f;
 	m_pBall->transform.pos.z = 5.0f;
-	m_pRock = CPU.CreateEntity();
+	m_pRock = cpuEngine.CreateEntity();
 	m_pRock->pMesh = &m_meshSphere;
 	m_pRock->pMaterial = &m_materialRock;
 	m_pRock->transform.SetScaling(0.1f);
@@ -90,23 +90,23 @@ void App::OnStart()
 	m_pShip->GetFSM()->ToState(CPU_ID(StateIdle));
 
 	// Particle
-	CPU.GetParticleData()->Create(1000000);
-	CPU.GetParticlePhysics()->gy = -0.5f;
-	m_pEmitter = CPU.CreateParticleEmitter();
+	cpuEngine.GetParticleData()->Create(1000000);
+	cpuEngine.GetParticlePhysics()->gy = -0.5f;
+	m_pEmitter = cpuEngine.CreateParticleEmitter();
 	m_pEmitter->density = 3000.0f;
 	m_pEmitter->colorMin = cpu::ToColor(255, 0, 0);
 	m_pEmitter->colorMax = cpu::ToColor(255, 128, 0);
 
 	// Camera
-	CPU.GetCamera()->transform.pos.z = -5.0f;
+	cpuEngine.GetCamera()->transform.pos.z = -5.0f;
 }
 
 void App::OnUpdate()
 {
 	// YOUR CODE HERE
 
-	float dt = CPU.DeltaTime();
-	float time = CPU.TotalTime();
+	float dt = cpuTime.delta;
+	float time = cpuTime.total;
 
 	// Move sprite
 	m_pSprite->y = 60 + cpu::RoundToInt(sinf(time)*20.0f);
@@ -123,16 +123,16 @@ void App::OnUpdate()
 	m_pEmitter->dir.z = -m_pEmitter->dir.z; 
 
 	// Turn camera
-	CPU.GetCamera()->transform.AddYPR(0.0f, 0.0f, dt*0.1f);
+	cpuEngine.GetCamera()->transform.AddYPR(0.0f, 0.0f, dt*0.1f);
 
 	// Move ship
-	if ( CPU.Input()->IsKey(VK_UP) )
+	if ( cpuInput.IsKey(VK_UP) )
 	{
-		CPU.GetCamera()->transform.Move(CPU.DeltaTime()*1.0f);
+		cpuEngine.GetCamera()->transform.Move(cpuTime.delta*1.0f);
 	}
-	if ( CPU.Input()->IsKey(VK_DOWN) )
+	if ( cpuInput.IsKey(VK_DOWN) )
 	{
-		CPU.GetCamera()->transform.Move(-CPU.DeltaTime()*1.0f);
+		cpuEngine.GetCamera()->transform.Move(-cpuTime.delta*1.0f);
 	}
 
 	// Move missiles
@@ -141,12 +141,12 @@ void App::OnUpdate()
 		cpu_entity* pMissile = *it;
 		pMissile->transform.Move(dt*m_missileSpeed);
 		if ( pMissile->lifetime>10.0f )
-			CPU.Release(pMissile);
+			cpuEngine.Release(pMissile);
 	}
 
 	// Fire
-	if ( CPU.Input()->IsKeyDown(VK_LBUTTON) || CPU.Input()->IsKey(VK_RBUTTON) )
-		APP.SpawnMissileWithMouse();
+	if ( cpuInput.IsKeyDown(VK_LBUTTON) || cpuInput.IsKey(VK_RBUTTON) )
+		cpuApp.SpawnMissileWithMouse();
 
 	// Purge missiles
 	for ( auto it=m_missiles.begin() ; it!=m_missiles.end() ; )
@@ -158,8 +158,8 @@ void App::OnUpdate()
 	}
 
 	// Quit
-	if ( CPU.Input()->IsKeyDown(VK_ESCAPE) )
-		CPU.Quit();
+	if ( cpuInput.IsKeyDown(VK_ESCAPE) )
+		cpuEngine.Quit();
 }
 
 void App::OnExit()
@@ -179,42 +179,42 @@ void App::OnRender(int pass)
 		case CPU_PASS_PARTICLE_BEGIN:
 		{
 			// Blur particles
-			//CPU.SetRT(m_rts[0]);
-			//CPU.ClearColor();
+			//cpuEngine.SetRT(m_rts[0]);
+			//cpuEngine.ClearColor();
 			break;
 		}
 		case CPU_PASS_PARTICLE_END:
 		{
 			// Blur particles
-			//CPU.Blur(10);
-			//CPU.SetMainRT();
-			//CPU.AlphaBlend(m_rts[0]);
+			//cpuEngine.Blur(10);
+			//cpuEngine.SetMainRT();
+			//cpuEngine.AlphaBlend(m_rts[0]);
 			break;
 		}
 		case CPU_PASS_UI_END:
 		{
 			// Debug
-			cpu_stats& stats = *CPU.GetStats();
+			cpu_stats& stats = *cpuEngine.GetStats();
 			std::string info = CPU_STR(stats.fps) + " fps, ";
 			info += CPU_STR(stats.drawnTriangleCount) + " triangles, ";
 			info += CPU_STR(stats.clipEntityCount) + " clipped entities\n";
 			info += CPU_STR(m_missiles.size()) + " missiles, ";
-			info += CPU_STR(CPU.GetParticleData()->alive) + " particles, ";
+			info += CPU_STR(cpuEngine.GetParticleData()->alive) + " particles, ";
 			info += CPU_STR(stats.threadCount) + " threads, ";
 			info += CPU_STR(stats.tileCount) + " tiles";
 
 			// Ray cast
 			cpu_ray ray;
-			CPU.GetCursorRay(ray);
+			cpuEngine.GetCursorRay(ray);
 			cpu_hit hit;
-			cpu_entity* pEntity = CPU.HitEntity(hit, ray);
+			cpu_entity* pEntity = cpuEngine.HitEntity(hit, ray);
 			if ( pEntity )
 			{
 				info += "\nHIT: ";
 				info += CPU_STR(pEntity->index).c_str();
 			}
 
-			CPU.DrawText(&m_font, info.c_str(), (int)CPU.GetMainRT()->widthHalf, 10, CPU_TEXT_CENTER);
+			cpuDevice.DrawText(&m_font, info.c_str(), (int)(cpuDevice.GetWidth()*0.5f), 10, CPU_TEXT_CENTER);
 			break;
 		}
 	}
@@ -228,7 +228,7 @@ void App::MissileShader(cpu_ps_io& io)
 
 void App::RockShader(cpu_ps_io& io)
 {
-	float time = CPU.TotalTime();
+	float time = cpuTime.total;
 	float scale = ((sinf(time*3.0f)*0.5f)+0.5f) * 0.5f + 0.5f; 
 	io.color.x = io.p.color.x * scale;
 	io.color.y = io.p.color.y * scale;
@@ -251,13 +251,13 @@ Ship::~Ship()
 
 void Ship::Create(cpu_mesh* pMesh, cpu_material* pMaterial)
 {
-	m_pEntity = CPU.CreateEntity();
+	m_pEntity = cpuEngine.CreateEntity();
 	m_pEntity->pMesh = pMesh;
 	m_pEntity->pMaterial = pMaterial;
 	m_pEntity->transform.pos.z = 5.0f;
 	m_pEntity->transform.pos.y = -3.0f;
 
-	m_pFSM = CPU.CreateFSM(this);
+	m_pFSM = cpuEngine.CreateFSM(this);
 	m_pFSM->SetGlobal<StateGlobal>();
 	m_pFSM->Add<StateIdle>();
 	m_pFSM->Add<StateBlink>();
@@ -265,13 +265,13 @@ void Ship::Create(cpu_mesh* pMesh, cpu_material* pMaterial)
 
 void Ship::Destroy()
 {
-	m_pFSM = CPU.Release(m_pFSM);
-	m_pEntity = CPU.Release(m_pEntity);
+	m_pFSM = cpuEngine.Release(m_pFSM);
+	m_pEntity = cpuEngine.Release(m_pEntity);
 }
 
 void Ship::Update()
 {
-	float dt = CPU.DeltaTime();
+	float dt = cpuTime.delta;
 
 	// Turn ship
 	m_pEntity->transform.AddYPR(dt, dt, dt);
@@ -280,8 +280,8 @@ void Ship::Update()
 	m_pEntity->transform.pos.z += dt * 1.0f;
 
 	// Fire
-	if ( CPU.Input()->IsKey(VK_SPACE) )
-		APP.SpawnMissile();
+	if ( cpuInput.IsKey(VK_SPACE) )
+		cpuApp.SpawnMissile();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

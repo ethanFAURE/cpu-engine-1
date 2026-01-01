@@ -1,122 +1,95 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Engine">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="Core">
-      <UniqueIdentifier>{290437a4-b8d2-4727-b740-8cf829d8c523}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Library">
+    <Filter Include="main">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="thread">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="manager">
+      <UniqueIdentifier>{66c77370-4810-44cf-8641-ada747bc7657}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="profiler">
+      <UniqueIdentifier>{09a6211b-5af2-4145-b57e-2bb1e18e64b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="collision">
+      <UniqueIdentifier>{d6c69af2-95e3-46cf-ba3c-217c556c2354}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Thread.h">
-      <Filter>Core</Filter>
+    <ClInclude Include="pch.h">
+      <Filter>main</Filter>
     </ClInclude>
-    <ClInclude Include="Engine.h">
-      <Filter>Engine</Filter>
+    <ClInclude Include="cpu_job.h">
+      <Filter>thread</Filter>
     </ClInclude>
-    <ClInclude Include="Entity.h">
-      <Filter>Engine</Filter>
+    <ClInclude Include="cpu_thread_job.h">
+      <Filter>thread</Filter>
     </ClInclude>
-    <ClInclude Include="Geometry.h">
-      <Filter>Engine</Filter>
+    <ClInclude Include="cpu_manager.h">
+      <Filter>manager</Filter>
     </ClInclude>
-    <ClInclude Include="Multithreading.h">
-      <Filter>Engine</Filter>
+    <ClInclude Include="cpu_fsm.h">
+      <Filter>manager</Filter>
     </ClInclude>
-    <ClInclude Include="cpu.h">
-      <Filter>Library</Filter>
+    <ClInclude Include="cpu_entity.h">
+      <Filter>manager</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <Filter>Library</Filter>
+    <ClInclude Include="cpu_callback.h">
+      <Filter>manager</Filter>
     </ClInclude>
-    <ClInclude Include="Input.h">
-      <Filter>Core</Filter>
+    <ClInclude Include="cpu-engine.h">
+      <Filter>main</Filter>
     </ClInclude>
-    <ClInclude Include="UI.h">
-      <Filter>Engine</Filter>
+    <ClInclude Include="cpu_engine.h">
+      <Filter>main</Filter>
     </ClInclude>
-    <ClInclude Include="global.h">
-      <Filter>Core</Filter>
+    <ClInclude Include="cpu_hit.h">
+      <Filter>collision</Filter>
     </ClInclude>
-    <ClInclude Include="Shader.h">
-      <Filter>Engine</Filter>
+    <ClInclude Include="cpu_stats.h">
+      <Filter>profiler</Filter>
     </ClInclude>
-    <ClInclude Include="Particle.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="State.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="png32.h">
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="config.h">
-      <Filter>Library</Filter>
-    </ClInclude>
-    <ClInclude Include="img32.h">
-      <Filter>Core</Filter>
-    </ClInclude>
-    <ClInclude Include="Manager.h">
-      <Filter>Engine</Filter>
-    </ClInclude>
-    <ClInclude Include="Function.h">
-      <Filter>Core</Filter>
+    <ClInclude Include="cpu_global_engine.h">
+      <Filter>main</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Thread.cpp">
-      <Filter>Core</Filter>
+    <ClCompile Include="pch.cpp">
+      <Filter>main</Filter>
     </ClCompile>
-    <ClCompile Include="Engine.cpp">
-      <Filter>Engine</Filter>
+    <ClCompile Include="cpu_job.cpp">
+      <Filter>thread</Filter>
     </ClCompile>
-    <ClCompile Include="Entity.cpp">
-      <Filter>Engine</Filter>
+    <ClCompile Include="cpu_thread_job.cpp">
+      <Filter>thread</Filter>
     </ClCompile>
-    <ClCompile Include="Geometry.cpp">
-      <Filter>Engine</Filter>
+    <ClCompile Include="cpu_manager.cpp">
+      <Filter>manager</Filter>
     </ClCompile>
-    <ClCompile Include="Multithreading.cpp">
-      <Filter>Engine</Filter>
+    <ClCompile Include="cpu_fsm.cpp">
+      <Filter>manager</Filter>
     </ClCompile>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>Library</Filter>
+    <ClCompile Include="cpu_entity.cpp">
+      <Filter>manager</Filter>
     </ClCompile>
-    <ClCompile Include="Input.cpp">
-      <Filter>Core</Filter>
+    <ClCompile Include="cpu_callback.cpp">
+      <Filter>manager</Filter>
     </ClCompile>
-    <ClCompile Include="UI.cpp">
-      <Filter>Engine</Filter>
+    <ClCompile Include="cpu_engine.cpp">
+      <Filter>main</Filter>
     </ClCompile>
-    <ClCompile Include="global.cpp">
-      <Filter>Core</Filter>
+    <ClCompile Include="cpu_hit.cpp">
+      <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="Shader.cpp">
-      <Filter>Engine</Filter>
+    <ClCompile Include="cpu_stats.cpp">
+      <Filter>profiler</Filter>
     </ClCompile>
-    <ClCompile Include="Particle.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="State.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="png32.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
-    <ClCompile Include="img32.cpp">
-      <Filter>Core</Filter>
-    </ClCompile>
-    <ClCompile Include="Manager.cpp">
-      <Filter>Engine</Filter>
-    </ClCompile>
-    <ClCompile Include="Function.cpp">
-      <Filter>Core</Filter>
+    <ClCompile Include="cpu_global_engine.cpp">
+      <Filter>main</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
