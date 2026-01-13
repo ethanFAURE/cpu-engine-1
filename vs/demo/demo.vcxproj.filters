@@ -20,7 +20,7 @@
     <ClInclude Include="App.h">
       <Filter>App</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
+    <ClInclude Include="pch.h">
       <Filter>App</Filter>
     </ClInclude>
   </ItemGroup>
@@ -28,7 +28,7 @@
     <ClCompile Include="demo.cpp">
       <Filter>App</Filter>
     </ClCompile>
-    <ClCompile Include="stdafx.cpp">
+    <ClCompile Include="pch.cpp">
       <Filter>App</Filter>
     </ClCompile>
     <ClCompile Include="App.cpp">
