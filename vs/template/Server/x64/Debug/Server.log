@@ -1,0 +1,5 @@
+﻿  Server.cpp
+C:\Users\efaure\Documents\GitHub\cpu-engine\vs\template\Server\Server.cpp(68,16): warning C4305: 'return' : troncation de 'int' à 'bool'
+C:\Users\efaure\Documents\GitHub\cpu-engine\vs\template\Server\Server.cpp(83,16): warning C4305: 'return' : troncation de 'int' à 'bool'
+C:\Users\efaure\Documents\GitHub\cpu-engine\vs\template\Server\Server.cpp(87,1): warning C4715: 'SendData' : les chemins de contrôle ne retournent pas tous une valeur
+  Server.vcxproj -> C:\Users\efaure\Documents\GitHub\cpu-engine\vs\x64\Debug\Server.exe
