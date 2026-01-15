@@ -84,7 +84,7 @@
     <ClCompile Include="pch.cpp">
       <Filter>main</Filter>
     </ClCompile>
-    <ClCompile Include="cpu_globalcpp">
+    <ClCompile Include="cpu_global.cpp">
       <Filter>main</Filter>
     </ClCompile>
     <ClCompile Include="cpu_thread.cpp">

@@ -114,7 +114,7 @@
     <ClCompile Include="cpu_vertex.cpp" />
     <ClCompile Include="cpu_function.cpp" />
     <ClCompile Include="cpu_vec3_cmp.cpp" />
-    <ClCompile Include="cpu_globalcpp" />
+    <ClCompile Include="cpu_global.cpp" />
     <ClCompile Include="cpu_img32.cpp" />
     <ClCompile Include="cpu_input.cpp" />
     <ClCompile Include="cpu_window.cpp" />
